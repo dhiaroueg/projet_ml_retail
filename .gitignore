@@ -1,0 +1,19 @@
+# Virtual environments
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ML / generated outputs
+data/
+models/
+reports/
+
+# OS files
+Thumbs.db
+.DS_Store
