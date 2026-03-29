@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Churn Predictor — Retail ML</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --card: #1a1a26;
+      --border: #2a2a3d;
+      --accent: #6c63ff;
+      --accent2: #ff6584;
+      --green: #00d4aa;
+      --yellow: #ffd166;
+      --text: #e8e8f0;
+      --muted: #6b6b8a;
+      --font-display: 'Syne', sans-serif;
+      --font-mono: 'Space Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-display);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Noise texture overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── HEADER ── */
+    header {
+      position: relative;
+      z-index: 10;
+      padding: 28px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: rgba(10,10,15,0.8);
+      backdrop-filter: blur(12px);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-icon {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+
+    .logo-text {
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-text span { color: var(--accent); }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(0, 212, 170, 0.1);
+      border: 1px solid rgba(0, 212, 170, 0.3);
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      color: var(--green);
+    }
+
+    .status-dot {
+      width: 6px; height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* ── LAYOUT ── */
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    .page-title {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 6px;
+    }
+
+    .page-title span {
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .page-sub {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 40px;
+      font-family: var(--font-mono);
+    }
+
+    /* ── STATS CARDS ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .stat-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+
+    .stat-card.purple::before { background: var(--accent); }
+    .stat-card.pink::before   { background: var(--accent2); }
+    .stat-card.green::before  { background: var(--green); }
+    .stat-card.yellow::before { background: var(--yellow); }
+
+    .stat-label {
+      font-size: 0.7rem;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+
+    .stat-value {
+      font-size: 1.9rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+
+    .stat-value.purple { color: var(--accent); }
+    .stat-value.pink   { color: var(--accent2); }
+    .stat-value.green  { color: var(--green); }
+    .stat-value.yellow { color: var(--yellow); }
+
+    .stat-meta {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 6px;
+      font-family: var(--font-mono);
+    }
+
+    /* ── MAIN GRID ── */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    /* ── FORM CARD ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 32px;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      margin-bottom: 6px;
+    }
+
+    .card-sub {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      margin-bottom: 28px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group.full { grid-column: 1 / -1; }
+
+    label {
+      font-size: 0.7rem;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    input, select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.15);
+    }
+
+    select option { background: var(--card); }
+
+    .btn-predict {
+      width: 100%;
+      margin-top: 20px;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--accent), #8b83ff);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: opacity 0.2s, transform 0.1s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-predict:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-predict:active { transform: translateY(0); }
+    .btn-predict:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-predict .btn-spinner {
+      display: none;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── RESULT PANEL ── */
+    .result-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px;
+      text-align: center;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 180px;
+      transition: all 0.4s ease;
+    }
+
+    .result-card.churn {
+      border-color: var(--accent2);
+      background: rgba(255, 101, 132, 0.05);
+    }
+
+    .result-card.no-churn {
+      border-color: var(--green);
+      background: rgba(0, 212, 170, 0.05);
+    }
+
+    .result-icon {
+      font-size: 3rem;
+      margin-bottom: 12px;
+      animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0); opacity: 0; }
+      to   { transform: scale(1); opacity: 1; }
+    }
+
+    .result-label {
+      font-size: 0.7rem;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    .result-verdict {
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .result-verdict.churn   { color: var(--accent2); }
+    .result-verdict.no-churn { color: var(--green); }
+
+    .result-proba {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    /* ── PROBA BAR ── */
+    .proba-bar-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px;
+    }
+
+    .proba-bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .proba-bar-track {
+      height: 10px;
+      background: var(--surface);
+      border-radius: 20px;
+      overflow: hidden;
+    }
+
+    .proba-bar-fill {
+      height: 100%;
+      border-radius: 20px;
+      width: 0%;
+      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ── HISTORY TABLE ── */
+    .history-card {
+      grid-column: 1 / -1;
+    }
+
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+
+    .history-table th {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      text-align: left;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .history-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(42, 42, 61, 0.5);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+    }
+
+    .history-table tr:last-child td { border-bottom: none; }
+    .history-table tr:hover td { background: rgba(108, 99, 255, 0.05); }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+
+    .badge.churn    { background: rgba(255,101,132,0.15); color: var(--accent2); }
+    .badge.no-churn { background: rgba(0,212,170,0.15);   color: var(--green); }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+    }
+
+    /* ── ERROR ── */
+    .error-banner {
+      display: none;
+      background: rgba(255, 101, 132, 0.1);
+      border: 1px solid rgba(255, 101, 132, 0.3);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--accent2);
+      margin-top: 14px;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .stats-grid   { grid-template-columns: repeat(2, 1fr); }
+      .main-grid    { grid-template-columns: 1fr; }
+      .history-card { grid-column: 1; }
+      .form-grid    { grid-template-columns: 1fr; }
+      header        { padding: 20px; }
+      .page-title   { font-size: 1.7rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🔮</div>
+    <div class="logo-text">Churn<span>Radar</span></div>
+  </div>
+  <div class="status-pill">
+    <div class="status-dot"></div>
+    API connectée
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- PAGE TITLE -->
+  <h1 class="page-title">Prédiction <span>Churn Client</span></h1>
+  <p class="page-sub">// Retail ML Dashboard — Analyse comportementale clientèle</p>
+
+  <!-- STATS -->
+  <div class="stats-grid">
+    <div class="stat-card purple">
+      <div class="stat-label">Prédictions effectuées</div>
+      <div class="stat-value purple" id="stat-total">0</div>
+      <div class="stat-meta">cette session</div>
+    </div>
+    <div class="stat-card pink">
+      <div class="stat-label">Churns détectés</div>
+      <div class="stat-value pink" id="stat-churns">0</div>
+      <div class="stat-meta">clients à risque</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Clients fidèles</div>
+      <div class="stat-value green" id="stat-loyal">0</div>
+      <div class="stat-meta">non-churn</div>
+    </div>
+    <div class="stat-card yellow">
+      <div class="stat-label">Taux de churn</div>
+      <div class="stat-value yellow" id="stat-rate">—</div>
+      <div class="stat-meta">% de la session</div>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- FORM -->
+    <div class="card">
+      <div class="card-title">Nouveau client</div>
+      <div class="card-sub">// Renseignez les features RFM du client</div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Recency (jours)</label>
+          <input type="number" id="recency" value="30" min="0" max="400"/>
+        </div>
+        <div class="form-group">
+          <label>Frequency (cmd)</label>
+          <input type="number" id="frequency" value="5" min="1" max="50"/>
+        </div>
+        <div class="form-group">
+          <label>MonetaryTotal (£)</label>
+          <input type="number" id="monetary" value="350" step="0.01"/>
+        </div>
+        <div class="form-group">
+          <label>Age</label>
+          <input type="number" id="age" value="35" min="15" max="100"/>
+        </div>
+        <div class="form-group">
+          <label>Satisfaction (1-5)</label>
+          <input type="number" id="satisfaction" value="3" min="1" max="5"/>
+        </div>
+        <div class="form-group">
+          <label>Support Tickets</label>
+          <input type="number" id="support" value="1" min="0" max="15"/>
+        </div>
+        <div class="form-group">
+          <label>Customer Tenure (jours)</label>
+          <input type="number" id="tenure" value="180" min="0" max="730"/>
+        </div>
+        <div class="form-group">
+          <label>Return Ratio</label>
+          <input type="number" id="return_ratio" value="0.1" min="0" max="1" step="0.01"/>
+        </div>
+        <div class="form-group">
+          <label>Region</label>
+          <select id="region">
+            <option>UK</option>
+            <option>Europe_N</option>
+            <option>Europe_S</option>
+            <option>Europe_E</option>
+            <option>Europe_C</option>
+            <option>Asia</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Customer Type</label>
+          <select id="customer_type">
+            <option>Regular</option>
+            <option>Hyperactif</option>
+            <option>Occasionnel</option>
+            <option>Nouveau</option>
+            <option>Perdu</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>RFM Segment</label>
+          <select id="rfm_segment">
+            <option>Champions</option>
+            <option>Fidèles</option>
+            <option>Potentiels</option>
+            <option>Dormants</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Loyalty Level</label>
+          <select id="loyalty_level">
+            <option>Établi</option>
+            <option>Nouveau</option>
+            <option>Jeune</option>
+            <option>Ancien</option>
+            <option>Inconnu</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn-predict" id="btn-predict" onclick="predict()">
+        <span id="btn-text">🔮 Prédire le Churn</span>
+        <div class="btn-spinner" id="btn-spinner"></div>
+      </button>
+      <div class="error-banner" id="error-banner"></div>
+    </div>
+
+    <!-- RESULT PANEL -->
+    <div class="result-panel">
+      <div class="result-card" id="result-card">
+        <div style="color:var(--muted); font-family:var(--font-mono); font-size:0.8rem;">
+          En attente d'une prédiction...
+        </div>
+      </div>
+
+      <div class="proba-bar-card">
+        <div class="proba-bar-label">
+          <span>Probabilité de Churn</span>
+          <span id="proba-pct">—</span>
+        </div>
+        <div class="proba-bar-track">
+          <div class="proba-bar-fill" id="proba-bar" style="background: var(--accent);"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:0.65rem; font-family:var(--font-mono); color:var(--muted);">
+          <span>0% — Fidèle</span>
+          <span>50% — Seuil</span>
+          <span>100% — Churn</span>
+        </div>
+      </div>
+
+      <!-- Quick Tips -->
+      <div class="card" style="padding:20px;">
+        <div class="card-title" style="font-size:0.85rem; margin-bottom:12px;">💡 Indicateurs clés</div>
+        <div style="display:flex; flex-direction:column; gap:8px; font-size:0.75rem; font-family:var(--font-mono); color:var(--muted);">
+          <div>📅 Recency élevée → risque accru</div>
+          <div>🛒 Fréquence faible → client dormant</div>
+          <div>⭐ Satisfaction &lt; 3 → signal d'alerte</div>
+          <div>🎫 Support tickets &gt; 5 → friction client</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY TABLE -->
+    <div class="card history-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <div>
+          <div class="card-title">Historique des prédictions</div>
+          <div class="card-sub" style="margin:0;">// cette session</div>
+        </div>
+        <button onclick="clearHistory()" style="background:transparent; border:1px solid var(--border); color:var(--muted); padding:6px 14px; border-radius:8px; cursor:pointer; font-family:var(--font-mono); font-size:0.72rem;">
+          Effacer
+        </button>
+      </div>
+      <div id="history-container">
+        <div class="empty-state">Aucune prédiction encore effectuée</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let history = [];
+  let stats = { total: 0, churns: 0, loyal: 0 };
+
+  async function predict() {
+    const btn = document.getElementById('btn-predict');
+    const btnText = document.getElementById('btn-text');
+    const spinner = document.getElementById('btn-spinner');
+    const errorBanner = document.getElementById('error-banner');
+
+    // Loading state
+    btn.disabled = true;
+    btnText.style.display = 'none';
+    spinner.style.display = 'block';
+    errorBanner.style.display = 'none';
+
+    const payload = {
+      data: [{
+        Recency:          parseFloat(document.getElementById('recency').value) || 0,
+        Frequency:        parseFloat(document.getElementById('frequency').value) || 1,
+        MonetaryTotal:    parseFloat(document.getElementById('monetary').value) || 0,
+        Age:              parseFloat(document.getElementById('age').value) || 35,
+        Satisfaction:     parseFloat(document.getElementById('satisfaction').value) || 3,
+        SupportTickets:   parseFloat(document.getElementById('support').value) || 0,
+        CustomerTenure:   parseFloat(document.getElementById('tenure').value) || 0,
+        ReturnRatio:      parseFloat(document.getElementById('return_ratio').value) || 0,
+        Region:           document.getElementById('region').value,
+        CustomerType:     document.getElementById('customer_type').value,
+        RFMSegment:       document.getElementById('rfm_segment').value,
+        LoyaltyLevel:     document.getElementById('loyalty_level').value,
+      }]
+    };
+
+    try {
+      const response = await fetch('/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || data.error) {
+        throw new Error(data.error || data.details || 'Erreur serveur');
+      }
+
+      const pred = data.predictions[0];
+      const isChurn = pred.predicted_churn === 1;
+      const proba = pred.predicted_churn_proba ?? (isChurn ? 0.8 : 0.2);
+
+      displayResult(isChurn, proba);
+      addToHistory(payload.data[0], isChurn, proba);
+      updateStats(isChurn);
+
+    } catch (err) {
+      errorBanner.textContent = '⚠️ ' + err.message;
+      errorBanner.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btnText.style.display = 'block';
+      spinner.style.display = 'none';
+    }
+  }
+
+  function displayResult(isChurn, proba) {
+    const card = document.getElementById('result-card');
+    const pct = Math.round(proba * 100);
+
+    card.className = 'result-card ' + (isChurn ? 'churn' : 'no-churn');
+    card.innerHTML = `
+      <div class="result-icon">${isChurn ? '⚠️' : '✅'}</div>
+      <div class="result-label">Prédiction</div>
+      <div class="result-verdict ${isChurn ? 'churn' : 'no-churn'}">
+        ${isChurn ? 'CHURN DÉTECTÉ' : 'CLIENT FIDÈLE'}
+      </div>
+      <div class="result-proba">Probabilité : ${pct}%</div>
+    `;
+
+    // Update proba bar
+    const bar = document.getElementById('proba-bar');
+    const probaPct = document.getElementById('proba-pct');
+    probaPct.textContent = pct + '%';
+
+    setTimeout(() => {
+      bar.style.width = pct + '%';
+      bar.style.background = isChurn
+        ? 'linear-gradient(90deg, var(--yellow), var(--accent2))'
+        : 'linear-gradient(90deg, var(--accent), var(--green))';
+    }, 50);
+  }
+
+  function addToHistory(features, isChurn, proba) {
+    const entry = {
+      time: new Date().toLocaleTimeString('fr-FR'),
+      recency: features.Recency,
+      frequency: features.Frequency,
+      monetary: features.MonetaryTotal,
+      segment: features.RFMSegment,
+      isChurn,
+      proba: Math.round(proba * 100)
+    };
+    history.unshift(entry);
+    if (history.length > 10) history.pop();
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const container = document.getElementById('history-container');
+    if (history.length === 0) {
+      container.innerHTML = '<div class="empty-state">Aucune prédiction encore effectuée</div>';
+      return;
+    }
+
+    container.innerHTML = `
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Heure</th>
+            <th>Recency</th>
+            <th>Frequency</th>
+            <th>Monetary</th>
+            <th>Segment</th>
+            <th>Proba</th>
+            <th>Résultat</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${history.map(e => `
+            <tr>
+              <td>${e.time}</td>
+              <td>${e.recency}j</td>
+              <td>${e.frequency}</td>
+              <td>£${e.monetary}</td>
+              <td>${e.segment}</td>
+              <td>${e.proba}%</td>
+              <td>
+                <span class="badge ${e.isChurn ? 'churn' : 'no-churn'}">
+                  ${e.isChurn ? '⚠️ Churn' : '✅ Fidèle'}
+                </span>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  function updateStats(isChurn) {
+    stats.total++;
+    if (isChurn) stats.churns++; else stats.loyal++;
+
+    document.getElementById('stat-total').textContent = stats.total;
+    document.getElementById('stat-churns').textContent = stats.churns;
+    document.getElementById('stat-loyal').textContent = stats.loyal;
+    document.getElementById('stat-rate').textContent =
+      Math.round((stats.churns / stats.total) * 100) + '%';
+  }
+
+  function clearHistory() {
+    history = [];
+    stats = { total: 0, churns: 0, loyal: 0 };
+    document.getElementById('stat-total').textContent = '0';
+    document.getElementById('stat-churns').textContent = '0';
+    document.getElementById('stat-loyal').textContent = '0';
+    document.getElementById('stat-rate').textContent = '—';
+    document.getElementById('proba-bar').style.width = '0%';
+    document.getElementById('proba-pct').textContent = '—';
+    document.getElementById('result-card').className = 'result-card';
+    document.getElementById('result-card').innerHTML =
+      '<div style="color:var(--muted); font-family:var(--font-mono); font-size:0.8rem;">En attente d\'une prédiction...</div>';
+    renderHistory();
+  }
+</script>
+</body>
+</html>
