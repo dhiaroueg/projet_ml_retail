@@ -429,7 +429,8 @@ def main() -> None:
     print(f"\n[INFO] Modèle K-Means sauvegardé : {km_path}")
 
     # ── DBSCAN ────────────────────────────────────────────────
-    db_labels = run_dbscan(X_scaled, eps=0.8, min_samples=10)
+    #db_labels = run_dbscan(X_scaled, eps=0.8, min_samples=10)
+    db_labels = run_dbscan(X_scaled, eps=3.0, min_samples=5)
 
     # Visualisation DBSCAN
     plot_clusters_pca(

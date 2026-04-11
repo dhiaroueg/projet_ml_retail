@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Churn Predictor — Retail ML</title>
+  <title>Retail ML Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
   <style>
     :root {
@@ -15,462 +15,215 @@
       --accent2: #ff6584;
       --green: #00d4aa;
       --yellow: #ffd166;
+      --blue: #4fc3f7;
       --text: #e8e8f0;
       --muted: #6b6b8a;
       --font-display: 'Syne', sans-serif;
       --font-mono: 'Space Mono', monospace;
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: var(--font-display); min-height: 100vh; overflow-x: hidden; }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font-display);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* Noise texture overlay */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    /* ── HEADER ── */
+    /* HEADER */
     header {
-      position: relative;
-      z-index: 10;
-      padding: 28px 40px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      position: relative; z-index: 10;
+      padding: 20px 40px;
+      display: flex; align-items: center; justify-content: space-between;
       border-bottom: 1px solid var(--border);
-      background: rgba(10,10,15,0.8);
-      backdrop-filter: blur(12px);
+      background: rgba(10,10,15,0.9); backdrop-filter: blur(12px);
     }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
+    .logo { display: flex; align-items: center; gap: 12px; }
     .logo-icon {
-      width: 38px; height: 38px;
+      width: 36px; height: 36px;
       background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
+      border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px;
     }
-
-    .logo-text {
-      font-size: 1.1rem;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-    }
-
+    .logo-text { font-size: 1.05rem; font-weight: 800; letter-spacing: -0.5px; }
     .logo-text span { color: var(--accent); }
-
     .status-pill {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 14px;
-      background: rgba(0, 212, 170, 0.1);
-      border: 1px solid rgba(0, 212, 170, 0.3);
-      border-radius: 20px;
-      font-size: 0.75rem;
-      font-family: var(--font-mono);
-      color: var(--green);
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 12px;
+      background: rgba(0,212,170,0.1); border: 1px solid rgba(0,212,170,0.3);
+      border-radius: 20px; font-size: 0.72rem; font-family: var(--font-mono); color: var(--green);
     }
+    .status-dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
 
-    .status-dot {
-      width: 6px; height: 6px;
-      background: var(--green);
-      border-radius: 50%;
-      animation: pulse 2s infinite;
+    /* TABS */
+    .tabs-nav {
+      position: sticky; top: 0; z-index: 9;
+      background: rgba(10,10,15,0.95); backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      display: flex; gap: 0; padding: 0 40px;
     }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.8); }
+    .tab-btn {
+      padding: 16px 28px; border: none; background: transparent;
+      color: var(--muted); font-family: var(--font-display); font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s;
+      display: flex; align-items: center; gap: 8px;
     }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--text); border-bottom-color: var(--accent); }
+    .tab-btn.active.reg  { border-bottom-color: var(--green); }
+    .tab-btn.active.clust{ border-bottom-color: var(--yellow); }
+    .tab-icon { font-size: 1rem; }
 
-    /* ── LAYOUT ── */
-    .container {
-      position: relative;
-      z-index: 1;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 40px 24px 80px;
-    }
+    /* CONTENT */
+    .container { max-width: 1200px; margin: 0 auto; padding: 32px 24px 80px; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
 
-    .page-title {
-      font-size: 2.4rem;
-      font-weight: 800;
-      letter-spacing: -1px;
-      margin-bottom: 6px;
-    }
+    .page-title { font-size: 2rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 4px; }
+    .page-sub { color: var(--muted); font-size: 0.85rem; margin-bottom: 32px; font-family: var(--font-mono); }
+    .gradient-purple { background: linear-gradient(90deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .gradient-green  { background: linear-gradient(90deg, var(--green), var(--blue)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .gradient-yellow { background: linear-gradient(90deg, var(--yellow), #ff9a3c); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 
-    .page-title span {
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .page-sub {
-      color: var(--muted);
-      font-size: 0.9rem;
-      margin-bottom: 40px;
-      font-family: var(--font-mono);
-    }
-
-    /* ── STATS CARDS ── */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      margin-bottom: 40px;
-    }
-
+    /* STATS */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 32px; }
     .stat-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 22px;
-      position: relative;
-      overflow: hidden;
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 20px; position: relative; overflow: hidden;
       transition: border-color 0.2s, transform 0.2s;
     }
-
-    .stat-card:hover {
-      border-color: var(--accent);
-      transform: translateY(-2px);
-    }
-
-    .stat-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-    }
-
+    .stat-card:hover { transform: translateY(-2px); }
+    .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
     .stat-card.purple::before { background: var(--accent); }
     .stat-card.pink::before   { background: var(--accent2); }
     .stat-card.green::before  { background: var(--green); }
     .stat-card.yellow::before { background: var(--yellow); }
+    .stat-card.blue::before   { background: var(--blue); }
+    .stat-label { font-size: 0.68rem; font-family: var(--font-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .stat-value { font-size: 1.8rem; font-weight: 800; letter-spacing: -1px; }
+    .stat-meta  { font-size: 0.72rem; color: var(--muted); margin-top: 4px; font-family: var(--font-mono); }
+    .cv { color: var(--accent); } .cv2 { color: var(--accent2); } .cg { color: var(--green); } .cy { color: var(--yellow); } .cb { color: var(--blue); }
 
-    .stat-label {
-      font-size: 0.7rem;
-      font-family: var(--font-mono);
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 10px;
-    }
-
-    .stat-value {
-      font-size: 1.9rem;
-      font-weight: 800;
-      letter-spacing: -1px;
-    }
-
-    .stat-value.purple { color: var(--accent); }
-    .stat-value.pink   { color: var(--accent2); }
-    .stat-value.green  { color: var(--green); }
-    .stat-value.yellow { color: var(--yellow); }
-
-    .stat-meta {
-      font-size: 0.75rem;
-      color: var(--muted);
-      margin-top: 6px;
-      font-family: var(--font-mono);
-    }
-
-    /* ── MAIN GRID ── */
-    .main-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-    }
-
-    /* ── FORM CARD ── */
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 32px;
-    }
-
-    .card-title {
-      font-size: 1rem;
-      font-weight: 800;
-      letter-spacing: -0.3px;
-      margin-bottom: 6px;
-    }
-
-    .card-sub {
-      font-size: 0.75rem;
-      color: var(--muted);
-      font-family: var(--font-mono);
-      margin-bottom: 28px;
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .form-group.full { grid-column: 1 / -1; }
-
-    label {
-      font-size: 0.7rem;
-      font-family: var(--font-mono);
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-    }
-
+    /* MAIN GRID */
+    .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 28px; }
+    .card-title { font-size: 0.95rem; font-weight: 800; margin-bottom: 4px; }
+    .card-sub { font-size: 0.72rem; color: var(--muted); font-family: var(--font-mono); margin-bottom: 24px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group.full { grid-column: 1/-1; }
+    label { font-size: 0.68rem; font-family: var(--font-mono); color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
     input, select {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 14px;
-      color: var(--text);
-      font-family: var(--font-mono);
-      font-size: 0.85rem;
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-      width: 100%;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 9px 12px; color: var(--text); font-family: var(--font-mono); font-size: 0.82rem;
+      outline: none; transition: border-color .2s, box-shadow .2s; width: 100%;
     }
-
-    input:focus, select:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.15);
-    }
-
+    input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(108,99,255,.15); }
     select option { background: var(--card); }
 
-    .btn-predict {
-      width: 100%;
-      margin-top: 20px;
-      padding: 14px;
-      background: linear-gradient(135deg, var(--accent), #8b83ff);
-      border: none;
-      border-radius: 10px;
-      color: white;
-      font-family: var(--font-display);
-      font-size: 0.95rem;
-      font-weight: 700;
-      cursor: pointer;
-      letter-spacing: 0.5px;
-      transition: opacity 0.2s, transform 0.1s;
-      position: relative;
-      overflow: hidden;
+    /* BUTTONS */
+    .btn {
+      width: 100%; margin-top: 18px; padding: 13px;
+      border: none; border-radius: 10px; color: white;
+      font-family: var(--font-display); font-size: 0.9rem; font-weight: 700;
+      cursor: pointer; letter-spacing: .5px; transition: opacity .2s, transform .1s;
     }
+    .btn:hover { opacity: .9; transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-purple { background: linear-gradient(135deg, var(--accent), #8b83ff); }
+    .btn-green  { background: linear-gradient(135deg, var(--green), #00a896); }
+    .btn-yellow { background: linear-gradient(135deg, var(--yellow), #ff9a3c); }
+    .btn-all    { background: linear-gradient(135deg, var(--accent), var(--green), var(--yellow)); background-size: 200%; animation: gradShift 3s ease infinite; }
+    @keyframes gradShift { 0%{background-position:0%} 50%{background-position:100%} 100%{background-position:0%} }
+    .spinner { display:none; width:16px; height:16px; border:2px solid rgba(255,255,255,.3); border-top-color:white; border-radius:50%; animation:spin .7s linear infinite; margin:0 auto; }
+    @keyframes spin { to{transform:rotate(360deg)} }
 
-    .btn-predict:hover { opacity: 0.9; transform: translateY(-1px); }
-    .btn-predict:active { transform: translateY(0); }
-    .btn-predict:disabled { opacity: 0.5; cursor: not-allowed; }
+    /* RESULT PANEL */
+    .result-panel { display: flex; flex-direction: column; gap: 18px; }
 
-    .btn-predict .btn-spinner {
-      display: none;
-      width: 16px; height: 16px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      margin: 0 auto;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── RESULT PANEL ── */
-    .result-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
+    /* Churn result */
     .result-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 28px;
-      text-align: center;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 180px;
-      transition: all 0.4s ease;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 24px; text-align: center; min-height: 160px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: all .4s ease;
     }
-
-    .result-card.churn {
-      border-color: var(--accent2);
-      background: rgba(255, 101, 132, 0.05);
-    }
-
-    .result-card.no-churn {
-      border-color: var(--green);
-      background: rgba(0, 212, 170, 0.05);
-    }
-
-    .result-icon {
-      font-size: 3rem;
-      margin-bottom: 12px;
-      animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-
-    @keyframes popIn {
-      from { transform: scale(0); opacity: 0; }
-      to   { transform: scale(1); opacity: 1; }
-    }
-
-    .result-label {
-      font-size: 0.7rem;
-      font-family: var(--font-mono);
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 8px;
-    }
-
-    .result-verdict {
-      font-size: 1.6rem;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-    }
-
+    .result-card.churn   { border-color: var(--accent2); background: rgba(255,101,132,.05); }
+    .result-card.no-churn{ border-color: var(--green);   background: rgba(0,212,170,.05); }
+    .result-icon { font-size: 2.5rem; margin-bottom: 10px; animation: popIn .4s cubic-bezier(.175,.885,.32,1.275); }
+    @keyframes popIn { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
+    .result-label { font-size: .68rem; font-family: var(--font-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .result-verdict { font-size: 1.5rem; font-weight: 800; letter-spacing: -.5px; }
     .result-verdict.churn   { color: var(--accent2); }
-    .result-verdict.no-churn { color: var(--green); }
+    .result-verdict.no-churn{ color: var(--green); }
+    .result-proba { font-family: var(--font-mono); font-size: .8rem; color: var(--muted); margin-top: 4px; }
 
-    .result-proba {
-      font-family: var(--font-mono);
-      font-size: 0.85rem;
-      color: var(--muted);
-      margin-top: 6px;
+    /* Revenue result */
+    .revenue-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 24px; text-align: center; min-height: 130px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: all .4s ease;
     }
+    .revenue-card.loaded { border-color: var(--green); background: rgba(0,212,170,.05); }
+    .revenue-amount { font-size: 2rem; font-weight: 800; color: var(--green); letter-spacing: -1px; margin: 8px 0 4px; }
 
-    /* ── PROBA BAR ── */
-    .proba-bar-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 22px;
+    /* Cluster result */
+    .cluster-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 24px; text-align: center; min-height: 130px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: all .4s ease;
     }
+    .cluster-card.loaded { border-color: var(--yellow); background: rgba(255,209,102,.05); }
+    .cluster-badge { font-size: 1.4rem; font-weight: 800; color: var(--yellow); margin: 6px 0 4px; }
+    .cluster-desc  { font-size: .75rem; font-family: var(--font-mono); color: var(--muted); }
 
-    .proba-bar-label {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.72rem;
-      font-family: var(--font-mono);
-      color: var(--muted);
-      margin-bottom: 10px;
-    }
+    /* Proba bar */
+    .proba-bar-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+    .proba-bar-label { display: flex; justify-content: space-between; font-size: .7rem; font-family: var(--font-mono); color: var(--muted); margin-bottom: 8px; }
+    .proba-bar-track { height: 9px; background: var(--surface); border-radius: 20px; overflow: hidden; }
+    .proba-bar-fill  { height: 100%; border-radius: 20px; width: 0%; transition: width .8s cubic-bezier(.4,0,.2,1); }
 
-    .proba-bar-track {
-      height: 10px;
-      background: var(--surface);
-      border-radius: 20px;
-      overflow: hidden;
-    }
-
-    .proba-bar-fill {
-      height: 100%;
-      border-radius: 20px;
-      width: 0%;
-      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    /* ── HISTORY TABLE ── */
-    .history-card {
-      grid-column: 1 / -1;
-    }
-
-    .history-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.8rem;
-    }
-
-    .history-table th {
-      font-family: var(--font-mono);
-      font-size: 0.65rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--muted);
-      text-align: left;
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .history-table td {
-      padding: 12px 14px;
-      border-bottom: 1px solid rgba(42, 42, 61, 0.5);
-      font-family: var(--font-mono);
-      font-size: 0.78rem;
-    }
-
+    /* History */
+    .history-card { grid-column: 1/-1; }
+    .history-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+    .history-table th { font-family: var(--font-mono); font-size: .63rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    .history-table td { padding: 10px 12px; border-bottom: 1px solid rgba(42,42,61,.5); font-family: var(--font-mono); font-size: .75rem; }
     .history-table tr:last-child td { border-bottom: none; }
-    .history-table tr:hover td { background: rgba(108, 99, 255, 0.05); }
+    .history-table tr:hover td { background: rgba(108,99,255,.05); }
+    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 20px; font-size: .68rem; font-weight: 700; }
+    .badge.churn    { background: rgba(255,101,132,.15); color: var(--accent2); }
+    .badge.no-churn { background: rgba(0,212,170,.15);   color: var(--green); }
+    .badge.cluster  { background: rgba(255,209,102,.15); color: var(--yellow); }
 
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 3px 10px;
-      border-radius: 20px;
-      font-size: 0.7rem;
-      font-weight: 700;
+    /* ALL-IN-ONE tab */
+    .all-results-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 20px; }
+    .all-result-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 22px; text-align: center; min-height: 150px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
     }
+    .all-result-card.classification { border-top: 3px solid var(--accent); }
+    .all-result-card.regression     { border-top: 3px solid var(--green); }
+    .all-result-card.clustering     { border-top: 3px solid var(--yellow); }
+    .all-card-title { font-size: .68rem; font-family: var(--font-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
 
-    .badge.churn    { background: rgba(255,101,132,0.15); color: var(--accent2); }
-    .badge.no-churn { background: rgba(0,212,170,0.15);   color: var(--green); }
+    /* Tips */
+    .tips-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+    .tips-card .card-title { font-size: .82rem; margin-bottom: 10px; }
+    .tip-item { font-size: .72rem; font-family: var(--font-mono); color: var(--muted); margin-bottom: 6px; }
 
-    .empty-state {
-      text-align: center;
-      padding: 40px;
-      color: var(--muted);
-      font-family: var(--font-mono);
-      font-size: 0.8rem;
-    }
+    /* Error */
+    .error-banner { display: none; background: rgba(255,101,132,.1); border: 1px solid rgba(255,101,132,.3); border-radius: 10px; padding: 10px 14px; font-family: var(--font-mono); font-size: .75rem; color: var(--accent2); margin-top: 12px; }
 
-    /* ── ERROR ── */
-    .error-banner {
-      display: none;
-      background: rgba(255, 101, 132, 0.1);
-      border: 1px solid rgba(255, 101, 132, 0.3);
-      border-radius: 10px;
-      padding: 12px 16px;
-      font-family: var(--font-mono);
-      font-size: 0.78rem;
-      color: var(--accent2);
-      margin-top: 14px;
-    }
+    /* Empty */
+    .empty-state { text-align: center; padding: 36px; color: var(--muted); font-family: var(--font-mono); font-size: .78rem; }
 
-    /* ── RESPONSIVE ── */
+    /* Responsive */
     @media (max-width: 768px) {
-      .stats-grid   { grid-template-columns: repeat(2, 1fr); }
-      .main-grid    { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: repeat(2,1fr); }
+      .main-grid  { grid-template-columns: 1fr; }
+      .all-results-grid { grid-template-columns: 1fr; }
       .history-card { grid-column: 1; }
-      .form-grid    { grid-template-columns: 1fr; }
-      header        { padding: 20px; }
-      .page-title   { font-size: 1.7rem; }
+      .form-grid { grid-template-columns: 1fr; }
+      .tabs-nav { padding: 0 16px; }
+      .tab-btn { padding: 14px 16px; font-size: .78rem; }
     }
   </style>
 </head>
@@ -479,362 +232,640 @@
 <!-- HEADER -->
 <header>
   <div class="logo">
-    <div class="logo-icon">🔮</div>
-    <div class="logo-text">Churn<span>Radar</span></div>
+    <div class="logo-icon">🤖</div>
+    <div class="logo-text">Retail<span>ML</span></div>
   </div>
   <div class="status-pill">
     <div class="status-dot"></div>
-    API connectée
+    3 modèles actifs
   </div>
 </header>
 
+<!-- TABS NAV -->
+<nav class="tabs-nav">
+  <button class="tab-btn active" onclick="switchTab('classification', this)">
+    <span class="tab-icon">🔮</span> Classification — Churn
+  </button>
+  <button class="tab-btn reg" onclick="switchTab('regression', this)">
+    <span class="tab-icon">📈</span> Régression — Dépense
+  </button>
+  <button class="tab-btn clust" onclick="switchTab('clustering', this)">
+    <span class="tab-icon">🗂️</span> Clustering — Segment
+  </button>
+  <button class="tab-btn" onclick="switchTab('all', this)">
+    <span class="tab-icon">⚡</span> Tout en un
+  </button>
+</nav>
+
 <div class="container">
 
-  <!-- PAGE TITLE -->
-  <h1 class="page-title">Prédiction <span>Churn Client</span></h1>
-  <p class="page-sub">// Retail ML Dashboard — Analyse comportementale clientèle</p>
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- TAB 1 : CLASSIFICATION                        -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="tab-content active" id="tab-classification">
 
-  <!-- STATS -->
-  <div class="stats-grid">
-    <div class="stat-card purple">
-      <div class="stat-label">Prédictions effectuées</div>
-      <div class="stat-value purple" id="stat-total">0</div>
-      <div class="stat-meta">cette session</div>
-    </div>
-    <div class="stat-card pink">
-      <div class="stat-label">Churns détectés</div>
-      <div class="stat-value pink" id="stat-churns">0</div>
-      <div class="stat-meta">clients à risque</div>
-    </div>
-    <div class="stat-card green">
-      <div class="stat-label">Clients fidèles</div>
-      <div class="stat-value green" id="stat-loyal">0</div>
-      <div class="stat-meta">non-churn</div>
-    </div>
-    <div class="stat-card yellow">
-      <div class="stat-label">Taux de churn</div>
-      <div class="stat-value yellow" id="stat-rate">—</div>
-      <div class="stat-meta">% de la session</div>
-    </div>
-  </div>
+    <h1 class="page-title">Prédiction <span class="gradient-purple">Churn Client</span></h1>
+    <p class="page-sub">// Classification — Random Forest — Le client va-t-il partir ?</p>
 
-  <!-- MAIN GRID -->
-  <div class="main-grid">
-
-    <!-- FORM -->
-    <div class="card">
-      <div class="card-title">Nouveau client</div>
-      <div class="card-sub">// Renseignez les features RFM du client</div>
-
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Recency (jours)</label>
-          <input type="number" id="recency" value="30" min="0" max="400"/>
-        </div>
-        <div class="form-group">
-          <label>Frequency (cmd)</label>
-          <input type="number" id="frequency" value="5" min="1" max="50"/>
-        </div>
-        <div class="form-group">
-          <label>MonetaryTotal (£)</label>
-          <input type="number" id="monetary" value="350" step="0.01"/>
-        </div>
-        <div class="form-group">
-          <label>Age</label>
-          <input type="number" id="age" value="35" min="15" max="100"/>
-        </div>
-        <div class="form-group">
-          <label>Satisfaction (1-5)</label>
-          <input type="number" id="satisfaction" value="3" min="1" max="5"/>
-        </div>
-        <div class="form-group">
-          <label>Support Tickets</label>
-          <input type="number" id="support" value="1" min="0" max="15"/>
-        </div>
-        <div class="form-group">
-          <label>Customer Tenure (jours)</label>
-          <input type="number" id="tenure" value="180" min="0" max="730"/>
-        </div>
-        <div class="form-group">
-          <label>Return Ratio</label>
-          <input type="number" id="return_ratio" value="0.1" min="0" max="1" step="0.01"/>
-        </div>
-        <div class="form-group">
-          <label>Region</label>
-          <select id="region">
-            <option>UK</option>
-            <option>Europe_N</option>
-            <option>Europe_S</option>
-            <option>Europe_E</option>
-            <option>Europe_C</option>
-            <option>Asia</option>
-            <option>Other</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Customer Type</label>
-          <select id="customer_type">
-            <option>Regular</option>
-            <option>Hyperactif</option>
-            <option>Occasionnel</option>
-            <option>Nouveau</option>
-            <option>Perdu</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>RFM Segment</label>
-          <select id="rfm_segment">
-            <option>Champions</option>
-            <option>Fidèles</option>
-            <option>Potentiels</option>
-            <option>Dormants</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Loyalty Level</label>
-          <select id="loyalty_level">
-            <option>Établi</option>
-            <option>Nouveau</option>
-            <option>Jeune</option>
-            <option>Ancien</option>
-            <option>Inconnu</option>
-          </select>
-        </div>
-      </div>
-
-      <button class="btn-predict" id="btn-predict" onclick="predict()">
-        <span id="btn-text">🔮 Prédire le Churn</span>
-        <div class="btn-spinner" id="btn-spinner"></div>
-      </button>
-      <div class="error-banner" id="error-banner"></div>
+    <div class="stats-grid">
+      <div class="stat-card purple"><div class="stat-label">Prédictions</div><div class="stat-value cv" id="c-total">0</div><div class="stat-meta">cette session</div></div>
+      <div class="stat-card pink"><div class="stat-label">Churns détectés</div><div class="stat-value cv2" id="c-churns">0</div><div class="stat-meta">clients à risque</div></div>
+      <div class="stat-card green"><div class="stat-label">Clients fidèles</div><div class="stat-value cg" id="c-loyal">0</div><div class="stat-meta">non-churn</div></div>
+      <div class="stat-card yellow"><div class="stat-label">Taux de churn</div><div class="stat-value cy" id="c-rate">—</div><div class="stat-meta">% session</div></div>
     </div>
 
-    <!-- RESULT PANEL -->
-    <div class="result-panel">
-      <div class="result-card" id="result-card">
-        <div style="color:var(--muted); font-family:var(--font-mono); font-size:0.8rem;">
-          En attente d'une prédiction...
+    <div class="main-grid">
+      <div class="card">
+        <div class="card-title">Données client</div>
+        <div class="card-sub">// Features RFM + comportementales</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Recency (jours)</label><input type="number" id="c-recency" value="30" min="0" max="400"/></div>
+          <div class="form-group"><label>Frequency (cmd)</label><input type="number" id="c-frequency" value="5" min="1" max="50"/></div>
+          <div class="form-group"><label>MonetaryTotal (£)</label><input type="number" id="c-monetary" value="350" step="0.01"/></div>
+          <div class="form-group"><label>Age</label><input type="number" id="c-age" value="35" min="15" max="100"/></div>
+          <div class="form-group"><label>Satisfaction (1-5)</label><input type="number" id="c-satisfaction" value="3" min="1" max="5"/></div>
+          <div class="form-group"><label>Support Tickets</label><input type="number" id="c-support" value="1" min="0" max="15"/></div>
+          <div class="form-group"><label>Customer Tenure (j)</label><input type="number" id="c-tenure" value="180" min="0" max="730"/></div>
+          <div class="form-group"><label>Return Ratio</label><input type="number" id="c-return" value="0.1" min="0" max="1" step="0.01"/></div>
+          <div class="form-group"><label>Region</label><select id="c-region"><option>UK</option><option>Europe_N</option><option>Europe_S</option><option>Europe_E</option><option>Europe_C</option><option>Asia</option><option>Other</option></select></div>
+          <div class="form-group"><label>Customer Type</label><select id="c-type"><option>Regular</option><option>Hyperactif</option><option>Occasionnel</option><option>Nouveau</option><option>Perdu</option></select></div>
+          <div class="form-group"><label>RFM Segment</label><select id="c-rfm"><option>Champions</option><option>Fidèles</option><option>Potentiels</option><option>Dormants</option></select></div>
+          <div class="form-group"><label>Loyalty Level</label><select id="c-loyalty"><option>Établi</option><option>Nouveau</option><option>Jeune</option><option>Ancien</option><option>Inconnu</option></select></div>
         </div>
-      </div>
-
-      <div class="proba-bar-card">
-        <div class="proba-bar-label">
-          <span>Probabilité de Churn</span>
-          <span id="proba-pct">—</span>
-        </div>
-        <div class="proba-bar-track">
-          <div class="proba-bar-fill" id="proba-bar" style="background: var(--accent);"></div>
-        </div>
-        <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:0.65rem; font-family:var(--font-mono); color:var(--muted);">
-          <span>0% — Fidèle</span>
-          <span>50% — Seuil</span>
-          <span>100% — Churn</span>
-        </div>
-      </div>
-
-      <!-- Quick Tips -->
-      <div class="card" style="padding:20px;">
-        <div class="card-title" style="font-size:0.85rem; margin-bottom:12px;">💡 Indicateurs clés</div>
-        <div style="display:flex; flex-direction:column; gap:8px; font-size:0.75rem; font-family:var(--font-mono); color:var(--muted);">
-          <div>📅 Recency élevée → risque accru</div>
-          <div>🛒 Fréquence faible → client dormant</div>
-          <div>⭐ Satisfaction &lt; 3 → signal d'alerte</div>
-          <div>🎫 Support tickets &gt; 5 → friction client</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- HISTORY TABLE -->
-    <div class="card history-card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <div>
-          <div class="card-title">Historique des prédictions</div>
-          <div class="card-sub" style="margin:0;">// cette session</div>
-        </div>
-        <button onclick="clearHistory()" style="background:transparent; border:1px solid var(--border); color:var(--muted); padding:6px 14px; border-radius:8px; cursor:pointer; font-family:var(--font-mono); font-size:0.72rem;">
-          Effacer
+        <button class="btn btn-purple" onclick="predictChurn()">
+          <span id="c-btn-text">🔮 Prédire le Churn</span>
+          <div class="spinner" id="c-spinner"></div>
         </button>
+        <div class="error-banner" id="c-error"></div>
       </div>
-      <div id="history-container">
-        <div class="empty-state">Aucune prédiction encore effectuée</div>
+
+      <div class="result-panel">
+        <div class="result-card" id="c-result">
+          <div style="color:var(--muted);font-family:var(--font-mono);font-size:.78rem;">En attente d'une prédiction...</div>
+        </div>
+        <div class="proba-bar-card">
+          <div class="proba-bar-label"><span>Probabilité de Churn</span><span id="c-proba-pct">—</span></div>
+          <div class="proba-bar-track"><div class="proba-bar-fill" id="c-proba-bar"></div></div>
+          <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:.63rem;font-family:var(--font-mono);color:var(--muted);">
+            <span>0% Fidèle</span><span>50% Seuil</span><span>100% Churn</span>
+          </div>
+        </div>
+        <div class="tips-card">
+          <div class="card-title">💡 Indicateurs clés</div>
+          <div class="tip-item">📅 Recency élevée → risque accru</div>
+          <div class="tip-item">🛒 Fréquence faible → client dormant</div>
+          <div class="tip-item">⭐ Satisfaction &lt; 3 → signal d'alerte</div>
+          <div class="tip-item">🎫 Tickets &gt; 5 → friction client</div>
+        </div>
+      </div>
+
+      <div class="card history-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+          <div><div class="card-title">Historique Classification</div><div class="card-sub" style="margin:0;">// cette session</div></div>
+          <button onclick="clearChurnHistory()" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:8px;cursor:pointer;font-family:var(--font-mono);font-size:.7rem;">Effacer</button>
+        </div>
+        <div id="c-history"><div class="empty-state">Aucune prédiction effectuée</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- TAB 2 : REGRESSION                            -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="tab-content" id="tab-regression">
+
+    <h1 class="page-title">Prédiction <span class="gradient-green">Dépense Future</span></h1>
+    <p class="page-sub">// Régression — Random Forest Regressor — Combien ce client va-t-il dépenser ?</p>
+
+    <div class="stats-grid">
+      <div class="stat-card green"><div class="stat-label">Prédictions</div><div class="stat-value cg" id="r-total">0</div><div class="stat-meta">cette session</div></div>
+      <div class="stat-card blue"><div class="stat-label">Dépense moy. prédite</div><div class="stat-value cb" id="r-avg">—</div><div class="stat-meta">£ moyenne</div></div>
+      <div class="stat-card yellow"><div class="stat-label">Dépense max prédite</div><div class="stat-value cy" id="r-max">—</div><div class="stat-meta">£ max session</div></div>
+      <div class="stat-card purple"><div class="stat-label">R² modèle</div><div class="stat-value cv">0.92</div><div class="stat-meta">variance expliquée</div></div>
+    </div>
+
+    <div class="main-grid">
+      <div class="card">
+        <div class="card-title">Données client</div>
+        <div class="card-sub">// Sans MonetaryTotal (c'est la cible à prédire)</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Recency (jours)</label><input type="number" id="r-recency" value="30" min="0" max="400"/></div>
+          <div class="form-group"><label>Frequency (cmd)</label><input type="number" id="r-frequency" value="5" min="1" max="50"/></div>
+          <div class="form-group"><label>Age</label><input type="number" id="r-age" value="35" min="15" max="100"/></div>
+          <div class="form-group"><label>Satisfaction (1-5)</label><input type="number" id="r-satisfaction" value="3" min="1" max="5"/></div>
+          <div class="form-group"><label>Support Tickets</label><input type="number" id="r-support" value="1" min="0" max="15"/></div>
+          <div class="form-group"><label>Customer Tenure (j)</label><input type="number" id="r-tenure" value="180" min="0" max="730"/></div>
+          <div class="form-group"><label>Return Ratio</label><input type="number" id="r-return" value="0.1" min="0" max="1" step="0.01"/></div>
+          <div class="form-group"><label>Total Quantity</label><input type="number" id="r-qty" value="50" min="0"/></div>
+          <div class="form-group"><label>Region</label><select id="r-region"><option>UK</option><option>Europe_N</option><option>Europe_S</option><option>Europe_E</option><option>Europe_C</option><option>Asia</option><option>Other</option></select></div>
+          <div class="form-group"><label>Customer Type</label><select id="r-type"><option>Regular</option><option>Hyperactif</option><option>Occasionnel</option><option>Nouveau</option><option>Perdu</option></select></div>
+          <div class="form-group"><label>RFM Segment</label><select id="r-rfm"><option>Champions</option><option>Fidèles</option><option>Potentiels</option><option>Dormants</option></select></div>
+          <div class="form-group"><label>Spending Category</label><select id="r-spending"><option>Medium</option><option>Low</option><option>High</option><option>VIP</option></select></div>
+        </div>
+        <button class="btn btn-green" onclick="predictRevenue()">
+          <span id="r-btn-text">📈 Prédire la Dépense</span>
+          <div class="spinner" id="r-spinner"></div>
+        </button>
+        <div class="error-banner" id="r-error"></div>
+      </div>
+
+      <div class="result-panel">
+        <div class="revenue-card" id="r-result">
+          <div class="result-label">Dépense future prédite</div>
+          <div class="revenue-amount" id="r-amount">— £</div>
+          <div class="result-proba" id="r-range"></div>
+        </div>
+
+        <div class="proba-bar-card">
+          <div class="proba-bar-label"><span>Niveau de dépense</span><span id="r-level">—</span></div>
+          <div class="proba-bar-track"><div class="proba-bar-fill" id="r-bar" style="background:var(--green)"></div></div>
+          <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:.63rem;font-family:var(--font-mono);color:var(--muted);">
+            <span>0£ Min</span><span>1 500£ Médiane</span><span>279 489£ Max</span>
+          </div>
+        </div>
+
+        <div class="tips-card">
+          <div class="card-title">💡 Métriques du modèle</div>
+          <div class="tip-item">📊 MAE = 513£ (erreur moyenne)</div>
+          <div class="tip-item">📐 RMSE = 2208£ (pénalise les grands écarts)</div>
+          <div class="tip-item">📈 R² = 0.92 (91.8% variance expliquée)</div>
+          <div class="tip-item">🌳 200 arbres Random Forest</div>
+        </div>
+      </div>
+
+      <div class="card history-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+          <div><div class="card-title">Historique Régression</div><div class="card-sub" style="margin:0;">// cette session</div></div>
+          <button onclick="clearRevenueHistory()" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:8px;cursor:pointer;font-family:var(--font-mono);font-size:.7rem;">Effacer</button>
+        </div>
+        <div id="r-history"><div class="empty-state">Aucune prédiction effectuée</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- TAB 3 : CLUSTERING                            -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="tab-content" id="tab-clustering">
+
+    <h1 class="page-title">Identification <span class="gradient-yellow">Segment Client</span></h1>
+    <p class="page-sub">// Clustering — K-Means (k=2) — Dans quel groupe naturel appartient ce client ?</p>
+
+    <div class="stats-grid">
+      <div class="stat-card yellow"><div class="stat-label">Prédictions</div><div class="stat-value cy" id="k-total">0</div><div class="stat-meta">cette session</div></div>
+      <div class="stat-card green"><div class="stat-label">VIP Champions</div><div class="stat-value cg" id="k-vip">0</div><div class="stat-meta">cluster 0</div></div>
+      <div class="stat-card pink"><div class="stat-label">Clients Standards</div><div class="stat-value cv2" id="k-std">0</div><div class="stat-meta">cluster 1</div></div>
+      <div class="stat-card purple"><div class="stat-label">Silhouette Score</div><div class="stat-value cv">0.83</div><div class="stat-meta">qualité clusters</div></div>
+    </div>
+
+    <div class="main-grid">
+      <div class="card">
+        <div class="card-title">Données client</div>
+        <div class="card-sub">// Features RFM numériques (sans Churn)</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Recency (jours)</label><input type="number" id="k-recency" value="30" min="0" max="400"/></div>
+          <div class="form-group"><label>Frequency (cmd)</label><input type="number" id="k-frequency" value="5" min="1" max="50"/></div>
+          <div class="form-group"><label>MonetaryTotal (£)</label><input type="number" id="k-monetary" value="350" step="0.01"/></div>
+          <div class="form-group"><label>Age</label><input type="number" id="k-age" value="35" min="15" max="100"/></div>
+          <div class="form-group"><label>Satisfaction (1-5)</label><input type="number" id="k-satisfaction" value="3" min="1" max="5"/></div>
+          <div class="form-group"><label>Support Tickets</label><input type="number" id="k-support" value="1" min="0" max="15"/></div>
+          <div class="form-group"><label>Customer Tenure (j)</label><input type="number" id="k-tenure" value="180" min="0" max="730"/></div>
+          <div class="form-group"><label>Return Ratio</label><input type="number" id="k-return" value="0.1" min="0" max="1" step="0.01"/></div>
+        </div>
+        <button class="btn btn-yellow" onclick="predictCluster()">
+          <span id="k-btn-text">🗂️ Identifier le Segment</span>
+          <div class="spinner" id="k-spinner"></div>
+        </button>
+        <div class="error-banner" id="k-error"></div>
+      </div>
+
+      <div class="result-panel">
+        <div class="cluster-card" id="k-result">
+          <div class="result-label">Segment identifié</div>
+          <div class="cluster-badge" id="k-badge">— </div>
+          <div class="cluster-desc" id="k-desc">En attente...</div>
+        </div>
+
+        <!-- Profils des 2 clusters -->
+        <div class="card" style="padding:20px;">
+          <div class="card-title" style="margin-bottom:14px;">📊 Profils des clusters</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div style="background:rgba(0,212,170,.08);border:1px solid rgba(0,212,170,.3);border-radius:10px;padding:14px;">
+              <div style="font-size:.7rem;font-family:var(--font-mono);color:var(--green);font-weight:700;margin-bottom:8px;">CLUSTER 0 — VIP</div>
+              <div style="font-size:.72rem;font-family:var(--font-mono);color:var(--muted);">Recency: 4 jours<br>Frequency: 92 cmd<br>Monetary: 94 947£<br>Churn: 0%</div>
+            </div>
+            <div style="background:rgba(255,101,132,.08);border:1px solid rgba(255,101,132,.3);border-radius:10px;padding:14px;">
+              <div style="font-size:.7rem;font-family:var(--font-mono);color:var(--accent2);font-weight:700;margin-bottom:8px;">CLUSTER 1 — STANDARDS</div>
+              <div style="font-size:.72rem;font-family:var(--font-mono);color:var(--muted);">Recency: 92 jours<br>Frequency: 5 cmd<br>Monetary: 1 535£<br>Churn: 33%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card history-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+          <div><div class="card-title">Historique Clustering</div><div class="card-sub" style="margin:0;">// cette session</div></div>
+          <button onclick="clearClusterHistory()" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:8px;cursor:pointer;font-family:var(--font-mono);font-size:.7rem;">Effacer</button>
+        </div>
+        <div id="k-history"><div class="empty-state">Aucune prédiction effectuée</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- TAB 4 : TOUT EN UN                            -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="tab-content" id="tab-all">
+
+    <h1 class="page-title">Analyse <span class="gradient-purple">Complète</span></h1>
+    <p class="page-sub">// Classification + Régression + Clustering — 3 prédictions en 1 clic</p>
+
+    <div class="main-grid" style="margin-bottom:24px;">
+      <div class="card">
+        <div class="card-title">Données client</div>
+        <div class="card-sub">// Toutes les features nécessaires</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Recency (jours)</label><input type="number" id="a-recency" value="30" min="0" max="400"/></div>
+          <div class="form-group"><label>Frequency (cmd)</label><input type="number" id="a-frequency" value="5" min="1" max="50"/></div>
+          <div class="form-group"><label>MonetaryTotal (£)</label><input type="number" id="a-monetary" value="350" step="0.01"/></div>
+          <div class="form-group"><label>Age</label><input type="number" id="a-age" value="35" min="15" max="100"/></div>
+          <div class="form-group"><label>Satisfaction (1-5)</label><input type="number" id="a-satisfaction" value="3" min="1" max="5"/></div>
+          <div class="form-group"><label>Support Tickets</label><input type="number" id="a-support" value="1" min="0" max="15"/></div>
+          <div class="form-group"><label>Customer Tenure (j)</label><input type="number" id="a-tenure" value="180" min="0" max="730"/></div>
+          <div class="form-group"><label>Return Ratio</label><input type="number" id="a-return" value="0.1" min="0" max="1" step="0.01"/></div>
+          <div class="form-group"><label>Region</label><select id="a-region"><option>UK</option><option>Europe_N</option><option>Europe_S</option><option>Europe_E</option><option>Europe_C</option><option>Asia</option><option>Other</option></select></div>
+          <div class="form-group"><label>Customer Type</label><select id="a-type"><option>Regular</option><option>Hyperactif</option><option>Occasionnel</option><option>Nouveau</option><option>Perdu</option></select></div>
+          <div class="form-group"><label>RFM Segment</label><select id="a-rfm"><option>Champions</option><option>Fidèles</option><option>Potentiels</option><option>Dormants</option></select></div>
+          <div class="form-group"><label>Loyalty Level</label><select id="a-loyalty"><option>Établi</option><option>Nouveau</option><option>Jeune</option><option>Ancien</option><option>Inconnu</option></select></div>
+        </div>
+        <button class="btn btn-all" onclick="predictAll()">
+          <span id="a-btn-text">⚡ Analyser avec les 3 modèles</span>
+          <div class="spinner" id="a-spinner"></div>
+        </button>
+        <div class="error-banner" id="a-error"></div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div class="all-result-card classification" id="a-churn-card">
+          <div class="all-card-title">🔮 Classification — Churn</div>
+          <div style="color:var(--muted);font-family:var(--font-mono);font-size:.75rem;">En attente...</div>
+        </div>
+        <div class="all-result-card regression" id="a-revenue-card">
+          <div class="all-card-title">📈 Régression — Dépense</div>
+          <div style="color:var(--muted);font-family:var(--font-mono);font-size:.75rem;">En attente...</div>
+        </div>
+        <div class="all-result-card clustering" id="a-cluster-card">
+          <div class="all-card-title">🗂️ Clustering — Segment</div>
+          <div style="color:var(--muted);font-family:var(--font-mono);font-size:.75rem;">En attente...</div>
+        </div>
       </div>
     </div>
 
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+        <div><div class="card-title">Historique analyses complètes</div><div class="card-sub" style="margin:0;">// cette session</div></div>
+        <button onclick="clearAllHistory()" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:8px;cursor:pointer;font-family:var(--font-mono);font-size:.7rem;">Effacer</button>
+      </div>
+      <div id="a-history"><div class="empty-state">Aucune analyse effectuée</div></div>
+    </div>
   </div>
+
 </div>
 
 <script>
-  let history = [];
-  let stats = { total: 0, churns: 0, loyal: 0 };
+// ── Tab switching ─────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
 
-  async function predict() {
-    const btn = document.getElementById('btn-predict');
-    const btnText = document.getElementById('btn-text');
-    const spinner = document.getElementById('btn-spinner');
-    const errorBanner = document.getElementById('error-banner');
+// ── Helpers ───────────────────────────────────────────────
+function v(id) { return parseFloat(document.getElementById(id).value) || 0; }
+function s(id) { return document.getElementById(id).value; }
+function setLoading(prefix, on) {
+  document.getElementById(prefix+'-btn-text').style.display = on ? 'none' : 'block';
+  document.getElementById(prefix+'-spinner').style.display = on ? 'block' : 'none';
+  document.querySelector(`[onclick="predict${prefix === 'c' ? 'Churn' : prefix === 'r' ? 'Revenue' : prefix === 'k' ? 'Cluster' : 'All'}()"]`).disabled = on;
+}
 
-    // Loading state
-    btn.disabled = true;
-    btnText.style.display = 'none';
-    spinner.style.display = 'block';
-    errorBanner.style.display = 'none';
+// ── State ─────────────────────────────────────────────────
+let churnHistory = [], revenueHistory = [], clusterHistory = [], allHistory = [];
+let churnStats = {total:0, churns:0, loyal:0};
+let revenueStats = {total:0, sum:0, max:0};
+let clusterStats = {total:0, vip:0, std:0};
 
-    const payload = {
-      data: [{
-        Recency:          parseFloat(document.getElementById('recency').value) || 0,
-        Frequency:        parseFloat(document.getElementById('frequency').value) || 1,
-        MonetaryTotal:    parseFloat(document.getElementById('monetary').value) || 0,
-        Age:              parseFloat(document.getElementById('age').value) || 35,
-        Satisfaction:     parseFloat(document.getElementById('satisfaction').value) || 3,
-        SupportTickets:   parseFloat(document.getElementById('support').value) || 0,
-        CustomerTenure:   parseFloat(document.getElementById('tenure').value) || 0,
-        ReturnRatio:      parseFloat(document.getElementById('return_ratio').value) || 0,
-        Region:           document.getElementById('region').value,
-        CustomerType:     document.getElementById('customer_type').value,
-        RFMSegment:       document.getElementById('rfm_segment').value,
-        LoyaltyLevel:     document.getElementById('loyalty_level').value,
-      }]
-    };
+// ══════════════════════════════════════════════════════════
+// TAB 1 : CLASSIFICATION
+// ══════════════════════════════════════════════════════════
+async function predictChurn() {
+  setLoading('c', true);
+  document.getElementById('c-error').style.display = 'none';
+  const payload = { data:[{
+    Recency: v('c-recency'), Frequency: v('c-frequency'), MonetaryTotal: v('c-monetary'),
+    Age: v('c-age'), Satisfaction: v('c-satisfaction'), SupportTickets: v('c-support'),
+    CustomerTenure: v('c-tenure'), ReturnRatio: v('c-return'),
+    Region: s('c-region'), CustomerType: s('c-type'), RFMSegment: s('c-rfm'), LoyaltyLevel: s('c-loyalty'),
+  }]};
+  try {
+    const res = await fetch('/predict', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.details || data.error || 'Erreur serveur');
+    const pred = data.predictions[0];
+    const isChurn = pred.predicted_churn === 1;
+    const proba = pred.predicted_churn_proba ?? (isChurn ? 0.8 : 0.2);
+    displayChurnResult(isChurn, proba);
+    addChurnHistory(payload.data[0], isChurn, proba);
+    updateChurnStats(isChurn);
+  } catch(e) {
+    document.getElementById('c-error').textContent = '⚠️ ' + e.message;
+    document.getElementById('c-error').style.display = 'block';
+  } finally { setLoading('c', false); }
+}
 
-    try {
-      const response = await fetch('/predict', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+function displayChurnResult(isChurn, proba) {
+  const card = document.getElementById('c-result');
+  const pct = Math.round(proba * 100);
+  card.className = 'result-card ' + (isChurn ? 'churn' : 'no-churn');
+  card.innerHTML = `
+    <div class="result-icon">${isChurn ? '⚠️' : '✅'}</div>
+    <div class="result-label">Prédiction Classification</div>
+    <div class="result-verdict ${isChurn ? 'churn' : 'no-churn'}">${isChurn ? 'CHURN DÉTECTÉ' : 'CLIENT FIDÈLE'}</div>
+    <div class="result-proba">Probabilité : ${pct}%</div>`;
+  document.getElementById('c-proba-pct').textContent = pct + '%';
+  setTimeout(() => {
+    document.getElementById('c-proba-bar').style.width = pct + '%';
+    document.getElementById('c-proba-bar').style.background = isChurn
+      ? 'linear-gradient(90deg,var(--yellow),var(--accent2))'
+      : 'linear-gradient(90deg,var(--accent),var(--green))';
+  }, 50);
+}
 
-      const data = await response.json();
+function addChurnHistory(f, isChurn, proba) {
+  churnHistory.unshift({ time: new Date().toLocaleTimeString('fr-FR'), recency: f.Recency, frequency: f.Frequency, monetary: f.MonetaryTotal, segment: f.RFMSegment, isChurn, proba: Math.round(proba*100) });
+  if (churnHistory.length > 8) churnHistory.pop();
+  renderChurnHistory();
+}
 
-      if (!response.ok || data.error) {
-        throw new Error(data.error || data.details || 'Erreur serveur');
-      }
+function updateChurnStats(isChurn) {
+  churnStats.total++; isChurn ? churnStats.churns++ : churnStats.loyal++;
+  document.getElementById('c-total').textContent = churnStats.total;
+  document.getElementById('c-churns').textContent = churnStats.churns;
+  document.getElementById('c-loyal').textContent = churnStats.loyal;
+  document.getElementById('c-rate').textContent = Math.round(churnStats.churns/churnStats.total*100) + '%';
+}
 
-      const pred = data.predictions[0];
-      const isChurn = pred.predicted_churn === 1;
-      const proba = pred.predicted_churn_proba ?? (isChurn ? 0.8 : 0.2);
+function renderChurnHistory() {
+  const el = document.getElementById('c-history');
+  if (!churnHistory.length) { el.innerHTML='<div class="empty-state">Aucune prédiction effectuée</div>'; return; }
+  el.innerHTML = `<table class="history-table"><thead><tr><th>Heure</th><th>Recency</th><th>Frequency</th><th>Monetary</th><th>Segment</th><th>Proba</th><th>Résultat</th></tr></thead><tbody>
+    ${churnHistory.map(e => `<tr>
+      <td>${e.time}</td><td>${e.recency}j</td><td>${e.frequency}</td><td>£${e.monetary}</td><td>${e.segment}</td><td>${e.proba}%</td>
+      <td><span class="badge ${e.isChurn?'churn':'no-churn'}">${e.isChurn?'⚠️ Churn':'✅ Fidèle'}</span></td>
+    </tr>`).join('')}</tbody></table>`;
+}
 
-      displayResult(isChurn, proba);
-      addToHistory(payload.data[0], isChurn, proba);
-      updateStats(isChurn);
+function clearChurnHistory() {
+  churnHistory = []; churnStats = {total:0,churns:0,loyal:0};
+  ['c-total','c-churns','c-loyal'].forEach(id => document.getElementById(id).textContent = '0');
+  document.getElementById('c-rate').textContent = '—';
+  document.getElementById('c-proba-bar').style.width = '0%';
+  document.getElementById('c-proba-pct').textContent = '—';
+  document.getElementById('c-result').className = 'result-card';
+  document.getElementById('c-result').innerHTML = '<div style="color:var(--muted);font-family:var(--font-mono);font-size:.78rem;">En attente...</div>';
+  renderChurnHistory();
+}
 
-    } catch (err) {
-      errorBanner.textContent = '⚠️ ' + err.message;
-      errorBanner.style.display = 'block';
-    } finally {
-      btn.disabled = false;
-      btnText.style.display = 'block';
-      spinner.style.display = 'none';
-    }
+// ══════════════════════════════════════════════════════════
+// TAB 2 : REGRESSION
+// ══════════════════════════════════════════════════════════
+async function predictRevenue() {
+  setLoading('r', true);
+  document.getElementById('r-error').style.display = 'none';
+  const payload = { data:[{
+    Recency: v('r-recency'), Frequency: v('r-frequency'), TotalQuantity: v('r-qty'),
+    Age: v('r-age'), Satisfaction: v('r-satisfaction'), SupportTickets: v('r-support'),
+    CustomerTenure: v('r-tenure'), ReturnRatio: v('r-return'),
+    Region: s('r-region'), CustomerType: s('r-type'), RFMSegment: s('r-rfm'), SpendingCat: s('r-spending'),
+  }]};
+  try {
+    const res = await fetch('/predict_revenue', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.details || data.error || 'Erreur serveur');
+    const amount = data.predictions[0].predicted_monetary_total;
+    displayRevenueResult(amount);
+    addRevenueHistory(payload.data[0], amount);
+    updateRevenueStats(amount);
+  } catch(e) {
+    document.getElementById('r-error').textContent = '⚠️ ' + e.message;
+    document.getElementById('r-error').style.display = 'block';
+  } finally { setLoading('r', false); }
+}
+
+function displayRevenueResult(amount) {
+  const card = document.getElementById('r-result');
+  card.className = 'revenue-card loaded';
+  document.getElementById('r-amount').textContent = amount.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' £';
+  const pct = Math.min(100, Math.round(amount / 2796 * 100));
+  document.getElementById('r-level').textContent = amount < 500 ? 'Faible' : amount < 2000 ? 'Moyen' : amount < 10000 ? 'Élevé' : 'VIP';
+  setTimeout(() => {
+    document.getElementById('r-bar').style.width = pct + '%';
+    document.getElementById('r-bar').style.background = amount > 10000
+      ? 'linear-gradient(90deg,var(--yellow),#ff9a3c)'
+      : 'linear-gradient(90deg,var(--accent),var(--green))';
+  }, 50);
+}
+
+function addRevenueHistory(f, amount) {
+  revenueHistory.unshift({ time: new Date().toLocaleTimeString('fr-FR'), recency: f.Recency, frequency: f.Frequency, segment: f.RFMSegment, amount });
+  if (revenueHistory.length > 8) revenueHistory.pop();
+  renderRevenueHistory();
+}
+
+function updateRevenueStats(amount) {
+  revenueStats.total++; revenueStats.sum += amount;
+  if (amount > revenueStats.max) revenueStats.max = amount;
+  document.getElementById('r-total').textContent = revenueStats.total;
+  document.getElementById('r-avg').textContent = Math.round(revenueStats.sum / revenueStats.total) + '£';
+  document.getElementById('r-max').textContent = Math.round(revenueStats.max) + '£';
+}
+
+function renderRevenueHistory() {
+  const el = document.getElementById('r-history');
+  if (!revenueHistory.length) { el.innerHTML='<div class="empty-state">Aucune prédiction effectuée</div>'; return; }
+  el.innerHTML = `<table class="history-table"><thead><tr><th>Heure</th><th>Recency</th><th>Frequency</th><th>Segment</th><th>Dépense prédite</th><th>Niveau</th></tr></thead><tbody>
+    ${revenueHistory.map(e => `<tr>
+      <td>${e.time}</td><td>${e.recency}j</td><td>${e.frequency}</td><td>${e.segment}</td>
+      <td style="color:var(--green);font-weight:700;">${e.amount.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})} £</td>
+      <td><span class="badge ${e.amount>10000?'churn':'no-churn'}">${e.amount<500?'Faible':e.amount<2000?'Moyen':e.amount<10000?'Élevé':'VIP'}</span></td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+function clearRevenueHistory() {
+  revenueHistory = []; revenueStats = {total:0, sum:0, max:0};
+  ['r-total','r-avg','r-max'].forEach(id => document.getElementById(id).textContent = id==='r-total'?'0':'—');
+  document.getElementById('r-bar').style.width = '0%';
+  document.getElementById('r-amount').textContent = '— £';
+  document.getElementById('r-result').className = 'revenue-card';
+  renderRevenueHistory();
+}
+
+// ══════════════════════════════════════════════════════════
+// TAB 3 : CLUSTERING
+// ══════════════════════════════════════════════════════════
+async function predictCluster() {
+  setLoading('k', true);
+  document.getElementById('k-error').style.display = 'none';
+  const payload = { data:[{
+    Recency: v('k-recency'), Frequency: v('k-frequency'), MonetaryTotal: v('k-monetary'),
+    Age: v('k-age'), Satisfaction: v('k-satisfaction'), SupportTickets: v('k-support'),
+    CustomerTenure: v('k-tenure'), ReturnRatio: v('k-return'),
+  }]};
+  try {
+    const res = await fetch('/predict_cluster', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.details || data.error || 'Erreur serveur');
+    const pred = data.predictions[0];
+    displayClusterResult(pred);
+    addClusterHistory(payload.data[0], pred);
+    updateClusterStats(pred.cluster);
+  } catch(e) {
+    document.getElementById('k-error').textContent = '⚠️ ' + e.message;
+    document.getElementById('k-error').style.display = 'block';
+  } finally { setLoading('k', false); }
+}
+
+function displayClusterResult(pred) {
+  const card = document.getElementById('k-result');
+  card.className = 'cluster-card loaded';
+  document.getElementById('k-badge').textContent = `Cluster ${pred.cluster} — ${pred.segment_name}`;
+  document.getElementById('k-desc').textContent = `${pred.description} | Churn: ${pred.churn_rate}`;
+}
+
+function addClusterHistory(f, pred) {
+  clusterHistory.unshift({ time: new Date().toLocaleTimeString('fr-FR'), recency: f.Recency, frequency: f.Frequency, monetary: f.MonetaryTotal, cluster: pred.cluster, name: pred.segment_name, churn: pred.churn_rate });
+  if (clusterHistory.length > 8) clusterHistory.pop();
+  renderClusterHistory();
+}
+
+function updateClusterStats(cluster) {
+  clusterStats.total++;
+  cluster === 0 ? clusterStats.vip++ : clusterStats.std++;
+  document.getElementById('k-total').textContent = clusterStats.total;
+  document.getElementById('k-vip').textContent = clusterStats.vip;
+  document.getElementById('k-std').textContent = clusterStats.std;
+}
+
+function renderClusterHistory() {
+  const el = document.getElementById('k-history');
+  if (!clusterHistory.length) { el.innerHTML='<div class="empty-state">Aucune prédiction effectuée</div>'; return; }
+  el.innerHTML = `<table class="history-table"><thead><tr><th>Heure</th><th>Recency</th><th>Frequency</th><th>Monetary</th><th>Cluster</th><th>Segment</th><th>Churn</th></tr></thead><tbody>
+    ${clusterHistory.map(e => `<tr>
+      <td>${e.time}</td><td>${e.recency}j</td><td>${e.frequency}</td><td>£${e.monetary}</td>
+      <td style="color:var(--yellow);font-weight:700;">${e.cluster}</td>
+      <td><span class="badge cluster">${e.name}</span></td>
+      <td style="color:${e.cluster===0?'var(--green)':'var(--accent2)'};">${e.churn}</td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+function clearClusterHistory() {
+  clusterHistory = []; clusterStats = {total:0, vip:0, std:0};
+  ['k-total','k-vip','k-std'].forEach(id => document.getElementById(id).textContent = '0');
+  document.getElementById('k-result').className = 'cluster-card';
+  document.getElementById('k-badge').textContent = '—';
+  document.getElementById('k-desc').textContent = 'En attente...';
+  renderClusterHistory();
+}
+
+// ══════════════════════════════════════════════════════════
+// TAB 4 : TOUT EN UN
+// ══════════════════════════════════════════════════════════
+async function predictAll() {
+  setLoading('a', true);
+  document.getElementById('a-error').style.display = 'none';
+  const payload = { data:[{
+    Recency: v('a-recency'), Frequency: v('a-frequency'), MonetaryTotal: v('a-monetary'),
+    Age: v('a-age'), Satisfaction: v('a-satisfaction'), SupportTickets: v('a-support'),
+    CustomerTenure: v('a-tenure'), ReturnRatio: v('a-return'),
+    Region: s('a-region'), CustomerType: s('a-type'), RFMSegment: s('a-rfm'), LoyaltyLevel: s('a-loyalty'),
+  }]};
+  try {
+    const res = await fetch('/predict_all', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.details || data.error || 'Erreur serveur');
+    const pred = data.predictions[0];
+    displayAllResults(pred, payload.data[0]);
+  } catch(e) {
+    document.getElementById('a-error').textContent = '⚠️ ' + e.message;
+    document.getElementById('a-error').style.display = 'block';
+  } finally { setLoading('a', false); }
+}
+
+function displayAllResults(pred, features) {
+  // Classification
+  if (pred.classification && !pred.classification.error) {
+    const c = pred.classification;
+    const isChurn = c.predicted_churn === 1;
+    const pct = Math.round((c.predicted_churn_proba || 0) * 100);
+    document.getElementById('a-churn-card').innerHTML = `
+      <div class="all-card-title">🔮 Classification — Churn</div>
+      <div style="font-size:1.5rem;margin:8px 0;">${isChurn ? '⚠️' : '✅'}</div>
+      <div style="font-size:1.1rem;font-weight:800;color:${isChurn?'var(--accent2)':'var(--green)'};">${c.verdict}</div>
+      <div style="font-size:.75rem;font-family:var(--font-mono);color:var(--muted);margin-top:4px;">Probabilité : ${pct}%</div>`;
   }
 
-  function displayResult(isChurn, proba) {
-    const card = document.getElementById('result-card');
-    const pct = Math.round(proba * 100);
-
-    card.className = 'result-card ' + (isChurn ? 'churn' : 'no-churn');
-    card.innerHTML = `
-      <div class="result-icon">${isChurn ? '⚠️' : '✅'}</div>
-      <div class="result-label">Prédiction</div>
-      <div class="result-verdict ${isChurn ? 'churn' : 'no-churn'}">
-        ${isChurn ? 'CHURN DÉTECTÉ' : 'CLIENT FIDÈLE'}
-      </div>
-      <div class="result-proba">Probabilité : ${pct}%</div>
-    `;
-
-    // Update proba bar
-    const bar = document.getElementById('proba-bar');
-    const probaPct = document.getElementById('proba-pct');
-    probaPct.textContent = pct + '%';
-
-    setTimeout(() => {
-      bar.style.width = pct + '%';
-      bar.style.background = isChurn
-        ? 'linear-gradient(90deg, var(--yellow), var(--accent2))'
-        : 'linear-gradient(90deg, var(--accent), var(--green))';
-    }, 50);
+  // Régression
+  if (pred.regression && !pred.regression.error) {
+    const r = pred.regression;
+    document.getElementById('a-revenue-card').innerHTML = `
+      <div class="all-card-title">📈 Régression — Dépense future</div>
+      <div style="font-size:1.6rem;font-weight:800;color:var(--green);margin:8px 0;">${r.predicted_monetary_total.toLocaleString('fr-FR',{minimumFractionDigits:2})} £</div>
+      <div style="font-size:.72rem;font-family:var(--font-mono);color:var(--muted);">MAE ±513£ | R²=0.92</div>`;
   }
 
-  function addToHistory(features, isChurn, proba) {
-    const entry = {
-      time: new Date().toLocaleTimeString('fr-FR'),
-      recency: features.Recency,
-      frequency: features.Frequency,
-      monetary: features.MonetaryTotal,
-      segment: features.RFMSegment,
-      isChurn,
-      proba: Math.round(proba * 100)
-    };
-    history.unshift(entry);
-    if (history.length > 10) history.pop();
-    renderHistory();
+  // Clustering
+  if (pred.clustering && !pred.clustering.error) {
+    const k = pred.clustering;
+    document.getElementById('a-cluster-card').innerHTML = `
+      <div class="all-card-title">🗂️ Clustering — Segment</div>
+      <div style="font-size:1rem;font-weight:800;color:var(--yellow);margin:8px 0;">Cluster ${k.cluster} — ${k.segment_name}</div>
+      <div style="font-size:.72rem;font-family:var(--font-mono);color:var(--muted);">Taux churn cluster : ${k.churn_rate_cluster}</div>`;
   }
 
-  function renderHistory() {
-    const container = document.getElementById('history-container');
-    if (history.length === 0) {
-      container.innerHTML = '<div class="empty-state">Aucune prédiction encore effectuée</div>';
-      return;
-    }
+  // Historique
+  allHistory.unshift({
+    time: new Date().toLocaleTimeString('fr-FR'),
+    recency: features.Recency,
+    churn: pred.classification?.verdict || '?',
+    revenue: pred.regression?.predicted_monetary_total || 0,
+    cluster: pred.clustering?.segment_name || '?',
+    isChurn: pred.classification?.predicted_churn === 1,
+  });
+  if (allHistory.length > 6) allHistory.pop();
+  renderAllHistory();
+}
 
-    container.innerHTML = `
-      <table class="history-table">
-        <thead>
-          <tr>
-            <th>Heure</th>
-            <th>Recency</th>
-            <th>Frequency</th>
-            <th>Monetary</th>
-            <th>Segment</th>
-            <th>Proba</th>
-            <th>Résultat</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${history.map(e => `
-            <tr>
-              <td>${e.time}</td>
-              <td>${e.recency}j</td>
-              <td>${e.frequency}</td>
-              <td>£${e.monetary}</td>
-              <td>${e.segment}</td>
-              <td>${e.proba}%</td>
-              <td>
-                <span class="badge ${e.isChurn ? 'churn' : 'no-churn'}">
-                  ${e.isChurn ? '⚠️ Churn' : '✅ Fidèle'}
-                </span>
-              </td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    `;
-  }
+function renderAllHistory() {
+  const el = document.getElementById('a-history');
+  if (!allHistory.length) { el.innerHTML='<div class="empty-state">Aucune analyse effectuée</div>'; return; }
+  el.innerHTML = `<table class="history-table"><thead><tr><th>Heure</th><th>Recency</th><th>Churn</th><th>Dépense prédite</th><th>Segment</th></tr></thead><tbody>
+    ${allHistory.map(e => `<tr>
+      <td>${e.time}</td><td>${e.recency}j</td>
+      <td><span class="badge ${e.isChurn?'churn':'no-churn'}">${e.churn}</span></td>
+      <td style="color:var(--green);">${e.revenue.toLocaleString('fr-FR',{minimumFractionDigits:2})} £</td>
+      <td><span class="badge cluster">${e.cluster}</span></td>
+    </tr>`).join('')}</tbody></table>`;
+}
 
-  function updateStats(isChurn) {
-    stats.total++;
-    if (isChurn) stats.churns++; else stats.loyal++;
-
-    document.getElementById('stat-total').textContent = stats.total;
-    document.getElementById('stat-churns').textContent = stats.churns;
-    document.getElementById('stat-loyal').textContent = stats.loyal;
-    document.getElementById('stat-rate').textContent =
-      Math.round((stats.churns / stats.total) * 100) + '%';
-  }
-
-  function clearHistory() {
-    history = [];
-    stats = { total: 0, churns: 0, loyal: 0 };
-    document.getElementById('stat-total').textContent = '0';
-    document.getElementById('stat-churns').textContent = '0';
-    document.getElementById('stat-loyal').textContent = '0';
-    document.getElementById('stat-rate').textContent = '—';
-    document.getElementById('proba-bar').style.width = '0%';
-    document.getElementById('proba-pct').textContent = '—';
-    document.getElementById('result-card').className = 'result-card';
-    document.getElementById('result-card').innerHTML =
-      '<div style="color:var(--muted); font-family:var(--font-mono); font-size:0.8rem;">En attente d\'une prédiction...</div>';
-    renderHistory();
-  }
+function clearAllHistory() {
+  allHistory = [];
+  ['a-churn-card','a-revenue-card','a-cluster-card'].forEach((id, i) => {
+    const titles = ['🔮 Classification — Churn','📈 Régression — Dépense future','🗂️ Clustering — Segment'];
+    document.getElementById(id).innerHTML = `<div class="all-card-title">${titles[i]}</div><div style="color:var(--muted);font-family:var(--font-mono);font-size:.75rem;">En attente...</div>`;
+  });
+  renderAllHistory();
+}
 </script>
 </body>
 </html>
