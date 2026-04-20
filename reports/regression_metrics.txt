@@ -1,0 +1,15 @@
+=== RAPPORT RÉGRESSION — Prédiction MonetaryTotal ===
+
+Cible : MonetaryTotal (dépense totale en £)
+Clients dans le dataset : 4,320
+Split : 80% train / 20% test
+
+Modèle                              MAE       RMSE       R²
+────────────────────────────────────────────────────────────
+LinearRegression                 829.18    3068.63   0.8422
+RandomForestRegressor            586.46    2272.96   0.9134 ← RETENU
+
+Interprétation des métriques :
+  MAE  = erreur moyenne en £ (ex: MAE=80 -> erreur moyenne de 80£)
+  RMSE = comme MAE mais pénalise plus les grandes erreurs
+  R²   = % de variance expliquée (0.80 = le modèle explique 80% de la variance)

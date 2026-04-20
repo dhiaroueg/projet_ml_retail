@@ -1,0 +1,3 @@
+check,bad_pct
+"Age hors [15, 100]",0.0
+RegistrationDate non parseable,0.0

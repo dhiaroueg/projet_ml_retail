@@ -1,0 +1,61 @@
+=== RAPPORT D'ENTRAÎNEMENT — CHURN CLASSIFICATION ===
+
+Modèle: LogisticRegression
+  Accuracy  : 0.8903
+  Precision : 0.7893
+  Recall    : 0.9141
+  F1-score  : 0.8471
+  ROC-AUC   : 0.9592
+  Confusion Matrix : [[513, 71], [25, 266]]
+  Classification Report :
+              precision    recall  f1-score   support
+
+           0       0.95      0.88      0.91       584
+           1       0.79      0.91      0.85       291
+
+    accuracy                           0.89       875
+   macro avg       0.87      0.90      0.88       875
+weighted avg       0.90      0.89      0.89       875
+
+------------------------------------------------------------
+Modèle: RandomForestClassifier
+  Accuracy  : 0.9166
+  Precision : 0.9258
+  Recall    : 0.8144
+  F1-score  : 0.8665
+  ROC-AUC   : 0.9743
+  Confusion Matrix : [[565, 19], [54, 237]]
+  Classification Report :
+              precision    recall  f1-score   support
+
+           0       0.91      0.97      0.94       584
+           1       0.93      0.81      0.87       291
+
+    accuracy                           0.92       875
+   macro avg       0.92      0.89      0.90       875
+weighted avg       0.92      0.92      0.92       875
+
+------------------------------------------------------------
+Modèle: XGBClassifier
+  Accuracy  : 0.9703
+  Precision : 0.9715
+  Recall    : 0.9381
+  F1-score  : 0.9545
+  ROC-AUC   : 0.9952
+  Confusion Matrix : [[576, 8], [18, 273]]
+  Classification Report :
+              precision    recall  f1-score   support
+
+           0       0.97      0.99      0.98       584
+           1       0.97      0.94      0.95       291
+
+    accuracy                           0.97       875
+   macro avg       0.97      0.96      0.97       875
+weighted avg       0.97      0.97      0.97       875
+
+------------------------------------------------------------
+
+=== MEILLEUR MODÈLE SÉLECTIONNÉ ===
+Modèle       : XGBClassifier
+Critère      : F1-score
+F1-score     : 0.9545

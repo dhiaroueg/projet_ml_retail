@@ -9,10 +9,7 @@ __pycache__/
 # Jupyter
 .ipynb_checkpoints/
 
-# ML / generated outputs
-data/
-models/
-reports/
+
 
 # OS files
 Thumbs.db
