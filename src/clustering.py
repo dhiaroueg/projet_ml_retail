@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import joblib
+
 """
 clustering.py — Segmentation non supervisée des clients Retail.
 
@@ -26,6 +28,7 @@ from sklearn.decomposition import PCA
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import davies_bouldin_score, silhouette_score
 from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
 
 # ============================================================
 # Import depuis utils.py
@@ -59,38 +62,40 @@ def section(title: str) -> None:
     print(f"{'='*60}")
 
 
-def prepare_features(df: pd.DataFrame) -> tuple[np.ndarray, list[str], StandardScaler]:
+def prepare_features(df: pd.DataFrame) -> tuple[np.ndarray, list[str], Pipeline]:
     """
     Prépare les features numériques pour le clustering :
       1. Sélection des colonnes numériques uniquement
-      2. Imputation des NaN par la médiane
-      3. Normalisation StandardScaler
-
-    Returns
-    -------
-    X_scaled     : array normalisé (n_samples × n_features)
-    feature_cols : liste des noms de colonnes utilisées
-    scaler       : objet StandardScaler fitté
+      2. Exclusion de la cible Churn
+      3. Imputation des NaN par la médiane
+      4. Normalisation avec StandardScaler
+      5. Sauvegarde du preprocessor clustering
     """
-    # On exclut la cible Churn si présente
+    # Colonnes numériques
     num_cols = df.select_dtypes(include="number").columns.tolist()
+
+    # Exclure la cible Churn
     if "Churn" in num_cols:
         num_cols.remove("Churn")
 
     X = df[num_cols].copy()
 
-    # Imputation médiane
-    imputer = SimpleImputer(strategy="median")
-    X_imp   = imputer.fit_transform(X)
+    cluster_preprocessor = Pipeline(steps=[
+        ("imputer", SimpleImputer(strategy="median")),
+        ("scaler", StandardScaler()),
+    ])
 
-    # Normalisation
-    scaler   = StandardScaler()
-    X_scaled = scaler.fit_transform(X_imp)
+    X_scaled = cluster_preprocessor.fit_transform(X)
+
+    # Sauvegarde du preprocessor pour Flask
+    prep_path = MODELS_DIR / "clustering_preprocessor.joblib"
+    joblib.dump(cluster_preprocessor, prep_path)
+    print("[INFO] Preprocessor clustering sauvegardé :", prep_path)
 
     print(f"[INFO] Features utilisées pour le clustering : {len(num_cols)}")
     print(f"[INFO] Shape données normalisées : {X_scaled.shape}")
 
-    return X_scaled, num_cols, scaler
+    return X_scaled, num_cols, cluster_preprocessor
 
 
 # ============================================================
@@ -401,7 +406,7 @@ def main() -> None:
     churn = df["Churn"].copy() if "Churn" in df.columns else None
 
     # ── Préparation des features ──────────────────────────────
-    X_scaled, feature_cols, scaler = prepare_features(df)
+    X_scaled, feature_cols, cluster_preprocessor = prepare_features(df)
 
     # ── K-MEANS ───────────────────────────────────────────────
 

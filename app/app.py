@@ -28,6 +28,7 @@ REG_PREP_PATH      = MODELS_DIR / "regression_preprocessor.joblib"
 # Clustering
 KMEANS_MODEL_PATH  = MODELS_DIR / "kmeans_model.joblib"
 CLUSTER_PROFILES   = REPORTS_DIR / "kmeans_cluster_profiles.csv"
+CLUSTER_PREP_PATH = MODELS_DIR / "clustering_preprocessor.joblib"
 
 # ============================================================
 # Flask app
@@ -73,6 +74,15 @@ def load_kmeans():
     if not KMEANS_MODEL_PATH.exists():
         raise FileNotFoundError(f"Modele KMeans introuvable: {KMEANS_MODEL_PATH}")
     return joblib.load(KMEANS_MODEL_PATH)
+def load_cluster_artifacts():
+    if not CLUSTER_PREP_PATH.exists():
+        raise FileNotFoundError(f"Preprocessor clustering introuvable: {CLUSTER_PREP_PATH}")
+    if not KMEANS_MODEL_PATH.exists():
+        raise FileNotFoundError(f"Modele KMeans introuvable: {KMEANS_MODEL_PATH}")
+
+    cluster_preprocessor = joblib.load(CLUSTER_PREP_PATH)
+    kmeans_model = joblib.load(KMEANS_MODEL_PATH)
+    return cluster_preprocessor, kmeans_model
 
 
 # ============================================================
@@ -235,33 +245,45 @@ def predict_cluster():
             return jsonify({"error": "'data' doit etre une liste non vide."}), 400
 
         X = pd.DataFrame(records)
+
         if "Churn" in X.columns:
             X = X.drop(columns=["Churn"], errors="ignore")
 
-        # Normalisation pour le clustering (mêmes colonnes numériques)
-        from sklearn.impute import SimpleImputer
-        from sklearn.preprocessing import StandardScaler
+        cluster_preprocessor, km = load_cluster_artifacts()
 
-        num_cols = X.select_dtypes(include="number").columns.tolist()
-        X_num = X[num_cols].copy() if num_cols else X.copy()
+        try:
+            cluster_cols = cluster_preprocessor.feature_names_in_.tolist()
+            X = align_columns(X, cluster_cols)
+        except AttributeError:
+            pass
 
-        imputer = SimpleImputer(strategy="median")
-        scaler  = StandardScaler()
-        X_imp    = imputer.fit_transform(X_num)
-        X_scaled = scaler.fit_transform(X_imp)
-
-        km = load_kmeans()
+        X_scaled = cluster_preprocessor.transform(X)
         cluster_labels = km.predict(X_scaled)
 
-        # Profils des clusters pour l'interprétation
         cluster_profiles = {
-            0: {"nom": "VIP Champions", "description": "Tres actifs, haute depense, fidelite maximale", "churn_rate": "0%"},
-            1: {"nom": "Clients Standards", "description": "Profil moyen, taux de churn 33%", "churn_rate": "33%"},
+            0: {
+                "nom": "Clients Standards",
+                "description": "Profil moyen, taux de churn environ 33%",
+                "churn_rate": "33%"
+            },
+            1: {
+                "nom": "VIP Champions",
+                "description": "Très actifs, haute dépense, fidélité maximale",
+                "churn_rate": "0%"
+            },
         }
 
         result = []
         for i, lbl in enumerate(cluster_labels):
-            profile = cluster_profiles.get(int(lbl), {"nom": f"Cluster {lbl}", "description": "Segment identifie", "churn_rate": "?"})
+            profile = cluster_profiles.get(
+                int(lbl),
+                {
+                    "nom": f"Cluster {lbl}",
+                    "description": "Segment identifié",
+                    "churn_rate": "?"
+                }
+            )
+
             result.append({
                 "index": i,
                 "cluster": int(lbl),
@@ -270,14 +292,22 @@ def predict_cluster():
                 "churn_rate": profile["churn_rate"],
             })
 
-        return jsonify({"status": "success", "n_predictions": len(result), "predictions": result})
+        return jsonify({
+            "status": "success",
+            "n_predictions": len(result),
+            "predictions": result
+        })
 
     except FileNotFoundError as e:
         return jsonify({"error": str(e)}), 500
-    except Exception as e:
-        import traceback; traceback.print_exc()
-        return jsonify({"error": "Erreur clustering.", "details": str(e)}), 500
 
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "error": "Erreur clustering.",
+            "details": str(e)
+        }), 500
 
 # ============================================================
 # Route 4 : Tout en une — les 3 prédictions ensemble
@@ -302,73 +332,117 @@ def predict_all():
             row_result = {"index": i}
             X_row = X_raw.iloc[[i]].copy()
 
-            # ── 1. Classification (Churn) ──────────────────
+            # ── 1. Classification : Churn ──────────────────
             try:
                 X_churn = X_row.copy()
+
                 if "Churn" in X_churn.columns:
-                    X_churn = X_churn.drop(columns=["Churn"])
+                    X_churn = X_churn.drop(columns=["Churn"], errors="ignore")
+
                 preprocessor, churn_model = load_churn_artifacts()
+
                 expected_cols = get_expected_columns()
                 if expected_cols:
                     X_churn = align_columns(X_churn, expected_cols)
+
                 X_t = preprocessor.transform(X_churn)
                 churn_pred = int(churn_model.predict(X_t)[0])
-                churn_proba = float(churn_model.predict_proba(X_t)[0][1]) \
-                    if hasattr(churn_model, "predict_proba") else None
+
+                churn_proba = None
+                if hasattr(churn_model, "predict_proba"):
+                    churn_proba = float(churn_model.predict_proba(X_t)[0][1])
+
                 row_result["classification"] = {
                     "predicted_churn": churn_pred,
                     "predicted_churn_proba": churn_proba,
                     "verdict": "CHURN" if churn_pred == 1 else "FIDELE",
                 }
+
             except Exception as e:
                 row_result["classification"] = {"error": str(e)}
 
-            # ── 2. Régression (dépense future) ─────────────
+            # ── 2. Régression : MonetaryTotal ───────────────
             try:
                 X_reg = X_row.copy()
-                cols_to_drop = ["MonetaryTotal", "MonetaryAvg", "MonetaryStd",
-                                "MonetaryMin", "MonetaryMax", "MonetaryPerDay",
-                                "AvgBasketValue", "Churn"]
-                X_reg = X_reg.drop(columns=[c for c in cols_to_drop if c in X_reg.columns])
+
+                cols_to_drop = [
+                    "MonetaryTotal",
+                    "MonetaryAvg",
+                    "MonetaryStd",
+                    "MonetaryMin",
+                    "MonetaryMax",
+                    "MonetaryPerDay",
+                    "AvgBasketValue",
+                    "Churn",
+                ]
+
+                X_reg = X_reg.drop(
+                    columns=[c for c in cols_to_drop if c in X_reg.columns],
+                    errors="ignore"
+                )
+
                 reg_prep, reg_model = load_regression_artifacts()
+
                 try:
                     reg_cols = reg_prep.feature_names_in_.tolist()
                     X_reg = align_columns(X_reg, reg_cols)
                 except AttributeError:
                     pass
+
                 X_t = reg_prep.transform(X_reg)
                 revenue_pred = float(reg_model.predict(X_t)[0])
+
                 row_result["regression"] = {
                     "predicted_monetary_total": round(revenue_pred, 2),
                     "currency": "GBP",
                 }
+
             except Exception as e:
                 row_result["regression"] = {"error": str(e)}
 
-            # ── 3. Clustering (segment) ────────────────────
+            # ── 3. Clustering : segment K-Means ─────────────
             try:
                 X_clust = X_row.copy()
+
                 if "Churn" in X_clust.columns:
-                    X_clust = X_clust.drop(columns=["Churn"])
-                from sklearn.impute import SimpleImputer
-                from sklearn.preprocessing import StandardScaler
-                num_cols = X_clust.select_dtypes(include="number").columns.tolist()
-                X_num = X_clust[num_cols].copy() if num_cols else X_clust.copy()
-                imp = SimpleImputer(strategy="median")
-                scl = StandardScaler()
-                X_scaled = scl.fit_transform(imp.fit_transform(X_num))
-                km = load_kmeans()
+                    X_clust = X_clust.drop(columns=["Churn"], errors="ignore")
+
+                cluster_preprocessor, km = load_cluster_artifacts()
+
+                try:
+                    cluster_cols = cluster_preprocessor.feature_names_in_.tolist()
+                    X_clust = align_columns(X_clust, cluster_cols)
+                except AttributeError:
+                    pass
+
+                X_scaled = cluster_preprocessor.transform(X_clust)
                 cluster = int(km.predict(X_scaled)[0])
+
                 profiles = {
-                    0: {"nom": "VIP Champions", "churn_rate": "0%"},
-                    1: {"nom": "Clients Standards", "churn_rate": "33%"},
+                    0: {
+                        "nom": "Clients Standards",
+                        "churn_rate": "33%",
+                    },
+                    1: {
+                        "nom": "VIP Champions",
+                        "churn_rate": "0%",
+                    },
                 }
-                profile = profiles.get(cluster, {"nom": f"Cluster {cluster}", "churn_rate": "?"})
+
+                profile = profiles.get(
+                    cluster,
+                    {
+                        "nom": f"Cluster {cluster}",
+                        "churn_rate": "?",
+                    }
+                )
+
                 row_result["clustering"] = {
                     "cluster": cluster,
                     "segment_name": profile["nom"],
                     "churn_rate_cluster": profile["churn_rate"],
                 }
+
             except Exception as e:
                 row_result["clustering"] = {"error": str(e)}
 
@@ -381,8 +455,12 @@ def predict_all():
         })
 
     except Exception as e:
-        import traceback; traceback.print_exc()
-        return jsonify({"error": "Erreur predict_all.", "details": str(e)}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "error": "Erreur predict_all.",
+            "details": str(e),
+        }), 500
 
 
 if __name__ == "__main__":

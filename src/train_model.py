@@ -10,17 +10,25 @@ import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 
+# ── XGBoost ──────────────────────────────────────────────────
+try:
+    from xgboost import XGBClassifier
+    XGBOOST_AVAILABLE = True
+except ImportError:
+    XGBOOST_AVAILABLE = False
+    print("[WARN] XGBoost non installe. Installe avec : pip install xgboost")
+
 # ============================================================
-# Import depuis utils.py  (évite la duplication de code)
+# Import depuis utils.py
 # ============================================================
 sys.path.append(str(Path(__file__).resolve().parent))
 from utils import (
-    evaluate_classifier,   # remplace evaluate_model()
-    save_metrics_report,   # remplace save_metrics_text()
-    plot_confusion_matrix, # visualisation matrice de confusion
-    plot_roc_curve,        # visualisation courbe ROC
-    plot_feature_importance, # visualisation importances features
-    print_metrics,         # affichage propre des métriques
+    evaluate_classifier,
+    save_metrics_report,
+    plot_confusion_matrix,
+    plot_roc_curve,
+    plot_feature_importance,
+    print_metrics,
 )
 
 # ============================================================
@@ -51,7 +59,7 @@ MODELS_DIR.mkdir(parents=True, exist_ok=True)
 def main() -> None:
     print("[INFO] Démarrage entraînement du modèle...")
 
-    # ── Vérification des fichiers nécessaires ────────────────
+    # ── Vérification fichiers ────────────────────────────────
     required_files = [X_TRAIN_PATH, X_TEST_PATH, Y_TRAIN_PATH, Y_TEST_PATH, PREPROCESSOR_PATH]
     missing = [str(p) for p in required_files if not p.exists()]
     if missing:
@@ -60,7 +68,7 @@ def main() -> None:
             + "\n".join(missing)
         )
 
-    # ── Chargement des splits ────────────────────────────────
+    # ── Chargement ──────────────────────────────────────────
     X_train = pd.read_csv(X_TRAIN_PATH)
     X_test  = pd.read_csv(X_TEST_PATH)
     y_train = pd.read_csv(Y_TRAIN_PATH)["Churn"]
@@ -69,20 +77,26 @@ def main() -> None:
     print(f"[INFO] X_train: {X_train.shape} | X_test: {X_test.shape}")
     print(f"[INFO] y_train distribution:\n{y_train.value_counts().rename(index={0:'Non-Churn',1:'Churn'})}")
 
-    # ── Chargement preprocessor (fitté sur train uniquement) ─
+    # ── Preprocessor ────────────────────────────────────────
     preprocessor = joblib.load(PREPROCESSOR_PATH)
     print(f"[INFO] Preprocessor chargé: {PREPROCESSOR_PATH}")
 
-    # ── Transformation (SANS fit → évite data leakage) ───────
     X_train_t = preprocessor.transform(X_train)
     X_test_t  = preprocessor.transform(X_test)
     print("[INFO] Transformation des données terminée.")
 
-    # Récupération des noms de features après transformation
     try:
         feature_names = preprocessor.get_feature_names_out().tolist()
     except Exception:
         feature_names = [f"f{i}" for i in range(X_train_t.shape[1])]
+
+    # ── Calcul scale_pos_weight pour XGBoost ────────────────
+    # XGBoost n'a pas class_weight='balanced', on utilise scale_pos_weight
+    # scale_pos_weight = n_negatifs / n_positifs
+    n_neg = (y_train == 0).sum()
+    n_pos = (y_train == 1).sum()
+    scale_pos_weight = n_neg / n_pos
+    print(f"[INFO] scale_pos_weight pour XGBoost : {scale_pos_weight:.3f}")
 
     # ============================================================
     # Modèles candidats
@@ -90,7 +104,7 @@ def main() -> None:
     models = [
         LogisticRegression(
             max_iter=1000,
-            class_weight="balanced",   # compense le déséquilibre Churn
+            class_weight="balanced",
             random_state=42,
         ),
         RandomForestClassifier(
@@ -104,23 +118,36 @@ def main() -> None:
         ),
     ]
 
+    # Ajoute XGBoost si disponible
+    if XGBOOST_AVAILABLE:
+        models.append(
+            XGBClassifier(
+                n_estimators=300,        # 300 arbres
+                max_depth=6,             # profondeur max de chaque arbre
+                learning_rate=0.1,       # taux d'apprentissage
+                subsample=0.8,           # sous-échantillonnage des lignes
+                colsample_bytree=0.8,    # sous-échantillonnage des colonnes
+                scale_pos_weight=scale_pos_weight,  # gestion déséquilibre
+                eval_metric="logloss",
+                random_state=42,
+                n_jobs=-1,
+            )
+        )
+    else:
+        print("[WARN] XGBoost ignoré (non installé)")
+
     all_metrics = []
 
-    # ── Entraînement + évaluation de chaque modèle ───────────
+    # ── Entraînement + évaluation ────────────────────────────
     for model in models:
         model_name = model.__class__.__name__
         print(f"\n[INFO] Entraînement: {model_name}")
         model.fit(X_train_t, y_train)
 
-        # evaluate_classifier vient de utils.py
-        # il calcule : accuracy, precision, recall, f1, roc_auc, confusion_matrix
         metrics = evaluate_classifier(model, X_test_t, y_test, model_name)
         all_metrics.append(metrics)
-
-        # Affichage propre via utils.py
         print_metrics(metrics)
 
-        # Sauvegarde figures pour ce modèle
         plot_confusion_matrix(
             y_test,
             model.predict(X_test_t),
@@ -139,11 +166,21 @@ def main() -> None:
             output_path=FIGURES_DIR / f"feature_importance_{model_name.lower()}.png",
         )
 
-    # ── Sélection du meilleur modèle (critère = F1-score) ────
+    # ── Sélection meilleur modèle (F1-score) ─────────────────
     best_metrics    = max(all_metrics, key=lambda m: m["f1_score"])
     best_model_name = best_metrics["model_name"]
     print(f"\n[INFO] Meilleur modèle sélectionné: {best_model_name}")
     print(f"[INFO] F1-score: {best_metrics['f1_score']:.4f}")
+
+    # ── Tableau comparatif des 3 modèles ─────────────────────
+    print("\n" + "="*65)
+    print(f"  {'Modèle':<30} {'Accuracy':>9} {'F1':>8} {'ROC-AUC':>9}")
+    print("  " + "-"*60)
+    for m in all_metrics:
+        flag = " ← RETENU" if m["model_name"] == best_model_name else ""
+        roc  = f"{m['roc_auc']:.4f}" if m.get("roc_auc") else "  N/A  "
+        print(f"  {m['model_name']:<30} {m['accuracy']:>9.4f} {m['f1_score']:>8.4f} {roc:>9}{flag}")
+    print("="*65)
 
     # ── Re-entraînement du meilleur modèle ───────────────────
     if best_model_name == "LogisticRegression":
@@ -152,6 +189,19 @@ def main() -> None:
             class_weight="balanced",
             random_state=42,
         )
+    elif best_model_name == "XGBClassifier" and XGBOOST_AVAILABLE:
+        best_model = XGBClassifier(
+            n_estimators=300,
+            max_depth=6,
+            learning_rate=0.1,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            scale_pos_weight=scale_pos_weight,
+            use_label_encoder=False,
+            eval_metric="logloss",
+            random_state=42,
+            n_jobs=-1,
+        )
     else:
         best_model = RandomForestClassifier(
             n_estimators=300,
@@ -159,33 +209,32 @@ def main() -> None:
             random_state=42,
             n_jobs=-1,
         )
+
     best_model.fit(X_train_t, y_train)
 
     # ── Sauvegarde modèle final ───────────────────────────────
     joblib.dump(best_model, FINAL_MODEL_PATH)
     print(f"[SUCCESS] Modèle final sauvegardé: {FINAL_MODEL_PATH}")
 
-    # ── Sauvegarde rapport métriques texte (via utils.py) ────
+    # ── Rapport métriques texte ───────────────────────────────
     metrics_txt_path = REPORTS_DIR / "model_metrics.txt"
     save_metrics_report(all_metrics, best_metrics, metrics_txt_path)
 
-    # ── Sauvegarde rapport métriques JSON ────────────────────
+    # ── Rapport métriques JSON ────────────────────────────────
     metrics_json_path = REPORTS_DIR / "model_metrics.json"
-
-    # Nettoyage pour JSON : supprimer classification_report (texte long)
-    all_metrics_json = []
-    for m in all_metrics:
-        m_copy = {k: v for k, v in m.items() if k != "classification_report"}
-        all_metrics_json.append(m_copy)
-
-    best_metrics_json = {k: v for k, v in best_metrics.items() if k != "classification_report"}
-
+    all_metrics_json = [
+        {k: v for k, v in m.items() if k != "classification_report"}
+        for m in all_metrics
+    ]
+    best_metrics_json = {
+        k: v for k, v in best_metrics.items() if k != "classification_report"
+    }
     metrics_json_path.write_text(
         json.dumps(
             {
-                "all_models":           all_metrics_json,
-                "best_model":           best_metrics_json,
-                "selection_criterion":  "f1_score",
+                "all_models":          all_metrics_json,
+                "best_model":          best_metrics_json,
+                "selection_criterion": "f1_score",
             },
             indent=2,
             ensure_ascii=False,
@@ -193,7 +242,7 @@ def main() -> None:
         encoding="utf-8",
     )
 
-    # ── Sauvegarde prédictions test ───────────────────────────
+    # ── Prédictions test ─────────────────────────────────────
     y_pred_best = best_model.predict(X_test_t)
     pred_df = X_test.copy()
     pred_df["y_true"] = y_test.values
@@ -209,7 +258,7 @@ def main() -> None:
     print(f"[INFO] Figures                 : {FIGURES_DIR}")
 
     print("\n" + "="*50)
-    print(f"  ✅ Entraînement terminé")
+    print(f"  Entraînement terminé")
     print(f"  Modèle retenu : {best_model_name}")
     print(f"  F1-score      : {best_metrics['f1_score']:.4f}")
     if best_metrics.get("roc_auc"):

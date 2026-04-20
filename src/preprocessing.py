@@ -59,6 +59,15 @@ def remove_leakage_and_irrelevant_columns(X: pd.DataFrame) -> Tuple[pd.DataFrame
         "CustomerID",
         "LastLoginIP",
         "ChurnRiskCategory",
+        "RFMSegment",
+        "ChurnRisk",
+        "CustomerType",
+        "LoyaltyLevel",
+        "SpendingCategory",
+        "AccountStatus",
+        "Recency",
+        "MonetaryPerDay",
+        "TenureRatio",
     ]
     for col in to_remove:
         if col in X.columns:

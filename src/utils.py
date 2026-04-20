@@ -76,23 +76,19 @@ def clean_column_names(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def clean_domain_anomalies(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Corrige les anomalies métier connues :
-      - Age hors [15, 100]  → NaN
-      - Satisfaction hors [1, 5] → NaN
-      - SupportTickets < 0 → NaN
-    """
     if "Age" in df.columns:
         df["Age"] = safe_to_numeric(df["Age"])
         df.loc[(df["Age"] < 15) | (df["Age"] > 100), "Age"] = np.nan
 
-    if "Satisfaction" in df.columns:
-        df["Satisfaction"] = safe_to_numeric(df["Satisfaction"])
-        df.loc[(df["Satisfaction"] < 1) | (df["Satisfaction"] > 5), "Satisfaction"] = np.nan
+    for col in ["Satisfaction", "SatisfactionScore"]:
+        if col in df.columns:
+            df[col] = safe_to_numeric(df[col])
+            df.loc[(df[col] < 1) | (df[col] > 5), col] = np.nan
 
-    if "SupportTickets" in df.columns:
-        df["SupportTickets"] = safe_to_numeric(df["SupportTickets"])
-        df.loc[df["SupportTickets"] < 0, "SupportTickets"] = np.nan
+    for col in ["SupportTickets", "SupportTicketsCount"]:
+        if col in df.columns:
+            df[col] = safe_to_numeric(df[col])
+            df.loc[df[col] < 0, col] = np.nan
 
     return df
 

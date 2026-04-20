@@ -279,7 +279,6 @@
         <div class="card-title">Données client</div>
         <div class="card-sub">// Features RFM + comportementales</div>
         <div class="form-grid">
-          <div class="form-group"><label>Recency (jours)</label><input type="number" id="c-recency" value="30" min="0" max="400"/></div>
           <div class="form-group"><label>Frequency (cmd)</label><input type="number" id="c-frequency" value="5" min="1" max="50"/></div>
           <div class="form-group"><label>MonetaryTotal (£)</label><input type="number" id="c-monetary" value="350" step="0.01"/></div>
           <div class="form-group"><label>Age</label><input type="number" id="c-age" value="35" min="15" max="100"/></div>
@@ -287,11 +286,7 @@
           <div class="form-group"><label>Support Tickets</label><input type="number" id="c-support" value="1" min="0" max="15"/></div>
           <div class="form-group"><label>Customer Tenure (j)</label><input type="number" id="c-tenure" value="180" min="0" max="730"/></div>
           <div class="form-group"><label>Return Ratio</label><input type="number" id="c-return" value="0.1" min="0" max="1" step="0.01"/></div>
-          <div class="form-group"><label>Region</label><select id="c-region"><option>UK</option><option>Europe_N</option><option>Europe_S</option><option>Europe_E</option><option>Europe_C</option><option>Asia</option><option>Other</option></select></div>
-          <div class="form-group"><label>Customer Type</label><select id="c-type"><option>Regular</option><option>Hyperactif</option><option>Occasionnel</option><option>Nouveau</option><option>Perdu</option></select></div>
-          <div class="form-group"><label>RFM Segment</label><select id="c-rfm"><option>Champions</option><option>Fidèles</option><option>Potentiels</option><option>Dormants</option></select></div>
-          <div class="form-group"><label>Loyalty Level</label><select id="c-loyalty"><option>Établi</option><option>Nouveau</option><option>Jeune</option><option>Ancien</option><option>Inconnu</option></select></div>
-        </div>
+          <div class="form-group"><label>Region</label><select id="c-region"><option>UK</option><option>Europe_N</option><option>Europe_S</option><option>Europe_E</option><option>Europe_C</option><option>Asia</option><option>Other</option></select></div></div>
         <button class="btn btn-purple" onclick="predictChurn()">
           <span id="c-btn-text">🔮 Prédire le Churn</span>
           <div class="spinner" id="c-spinner"></div>
@@ -451,11 +446,11 @@
           <div class="card-title" style="margin-bottom:14px;">📊 Profils des clusters</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
             <div style="background:rgba(0,212,170,.08);border:1px solid rgba(0,212,170,.3);border-radius:10px;padding:14px;">
-              <div style="font-size:.7rem;font-family:var(--font-mono);color:var(--green);font-weight:700;margin-bottom:8px;">CLUSTER 0 — VIP</div>
+              <div style="font-size:.7rem;font-family:var(--font-mono);color:var(--green);font-weight:700;margin-bottom:8px;">CLUSTER 0 — CLIENTS STANDARDS</div>
               <div style="font-size:.72rem;font-family:var(--font-mono);color:var(--muted);">Recency: 4 jours<br>Frequency: 92 cmd<br>Monetary: 94 947£<br>Churn: 0%</div>
             </div>
             <div style="background:rgba(255,101,132,.08);border:1px solid rgba(255,101,132,.3);border-radius:10px;padding:14px;">
-              <div style="font-size:.7rem;font-family:var(--font-mono);color:var(--accent2);font-weight:700;margin-bottom:8px;">CLUSTER 1 — STANDARDS</div>
+              <div style="font-size:.7rem;font-family:var(--font-mono);color:var(--accent2);font-weight:700;margin-bottom:8px;">CLUSTER 1 — VIP CHAMPIONS</div>
               <div style="font-size:.72rem;font-family:var(--font-mono);color:var(--muted);">Recency: 92 jours<br>Frequency: 5 cmd<br>Monetary: 1 535£<br>Churn: 33%</div>
             </div>
           </div>
@@ -563,11 +558,10 @@ async function predictChurn() {
   setLoading('c', true);
   document.getElementById('c-error').style.display = 'none';
   const payload = { data:[{
-    Recency: v('c-recency'), Frequency: v('c-frequency'), MonetaryTotal: v('c-monetary'),
-    Age: v('c-age'), Satisfaction: v('c-satisfaction'), SupportTickets: v('c-support'),
-    CustomerTenure: v('c-tenure'), ReturnRatio: v('c-return'),
-    Region: s('c-region'), CustomerType: s('c-type'), RFMSegment: s('c-rfm'), LoyaltyLevel: s('c-loyalty'),
-  }]};
+     Frequency: v('c-frequency'), MonetaryTotal: v('c-monetary'),
+    Age: v('c-age'), SatisfactionScore: v('c-satisfaction'), SupportTicketsCount: v('c-support'),
+    CustomerTenureDays: v('c-tenure'), ReturnRatio: v('c-return'),
+    Region: s('c-region'), }]};
   try {
     const res = await fetch('/predict', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
     const data = await res.json();
@@ -619,9 +613,10 @@ function updateChurnStats(isChurn) {
 function renderChurnHistory() {
   const el = document.getElementById('c-history');
   if (!churnHistory.length) { el.innerHTML='<div class="empty-state">Aucune prédiction effectuée</div>'; return; }
-  el.innerHTML = `<table class="history-table"><thead><tr><th>Heure</th><th>Recency</th><th>Frequency</th><th>Monetary</th><th>Segment</th><th>Proba</th><th>Résultat</th></tr></thead><tbody>
+  el.innerHTML = `<table class="history-table"><thead><tr><th>Heure</th><th>Frequency</th><th>Monetary</th><th>Segment</th><th>Proba</th><th>Résultat</th></tr></thead><tbody>
     ${churnHistory.map(e => `<tr>
-      <td>${e.time}</td><td>${e.recency}j</td><td>${e.frequency}</td><td>£${e.monetary}</td><td>${e.segment}</td><td>${e.proba}%</td>
+      <td>${e.time}</td>
+      <td>${e.frequency}</td><td>£${e.monetary}</td><td>${e.segment}</td><td>${e.proba}%</td>
       <td><span class="badge ${e.isChurn?'churn':'no-churn'}">${e.isChurn?'⚠️ Churn':'✅ Fidèle'}</span></td>
     </tr>`).join('')}</tbody></table>`;
 }
@@ -645,8 +640,8 @@ async function predictRevenue() {
   document.getElementById('r-error').style.display = 'none';
   const payload = { data:[{
     Recency: v('r-recency'), Frequency: v('r-frequency'), TotalQuantity: v('r-qty'),
-    Age: v('r-age'), Satisfaction: v('r-satisfaction'), SupportTickets: v('r-support'),
-    CustomerTenure: v('r-tenure'), ReturnRatio: v('r-return'),
+    Age: v('r-age'), SatisfactionScore: v('r-satisfaction'), SupportTicketsCount: v('r-support'),
+    CustomerTenureDays: v('r-tenure'), ReturnRatio: v('r-return'),
     Region: s('r-region'), CustomerType: s('r-type'), RFMSegment: s('r-rfm'), SpendingCat: s('r-spending'),
   }]};
   try {
@@ -719,8 +714,8 @@ async function predictCluster() {
   document.getElementById('k-error').style.display = 'none';
   const payload = { data:[{
     Recency: v('k-recency'), Frequency: v('k-frequency'), MonetaryTotal: v('k-monetary'),
-    Age: v('k-age'), Satisfaction: v('k-satisfaction'), SupportTickets: v('k-support'),
-    CustomerTenure: v('k-tenure'), ReturnRatio: v('k-return'),
+    Age: v('k-age'), SatisfactionScore: v('k-satisfaction'), SupportTicketsCount: v('k-support'),
+    CustomerTenureDays: v('k-tenure'), ReturnRatio: v('k-return'),
   }]};
   try {
     const res = await fetch('/predict_cluster', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
@@ -751,7 +746,7 @@ function addClusterHistory(f, pred) {
 
 function updateClusterStats(cluster) {
   clusterStats.total++;
-  cluster === 0 ? clusterStats.vip++ : clusterStats.std++;
+  cluster === 1 ? clusterStats.vip++ : clusterStats.std++;
   document.getElementById('k-total').textContent = clusterStats.total;
   document.getElementById('k-vip').textContent = clusterStats.vip;
   document.getElementById('k-std').textContent = clusterStats.std;
@@ -786,8 +781,8 @@ async function predictAll() {
   document.getElementById('a-error').style.display = 'none';
   const payload = { data:[{
     Recency: v('a-recency'), Frequency: v('a-frequency'), MonetaryTotal: v('a-monetary'),
-    Age: v('a-age'), Satisfaction: v('a-satisfaction'), SupportTickets: v('a-support'),
-    CustomerTenure: v('a-tenure'), ReturnRatio: v('a-return'),
+    Age: v('a-age'), SatisfactionScore: v('a-satisfaction'), SupportTicketsCount: v('a-support'),
+    CustomerTenureDays: v('a-tenure'), ReturnRatio: v('a-return'),
     Region: s('a-region'), CustomerType: s('a-type'), RFMSegment: s('a-rfm'), LoyaltyLevel: s('a-loyalty'),
   }]};
   try {
