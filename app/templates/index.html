@@ -265,7 +265,7 @@
   <div class="tab-content active" id="tab-classification">
 
     <h1 class="page-title">Prédiction <span class="gradient-purple">Churn Client</span></h1>
-    <p class="page-sub">// Classification — Random Forest — Le client va-t-il partir ?</p>
+    <p class="page-sub">// Classification — XGBoost — Le client va-t-il partir ?</p>
 
     <div class="stats-grid">
       <div class="stat-card purple"><div class="stat-label">Prédictions</div><div class="stat-value cv" id="c-total">0</div><div class="stat-meta">cette session</div></div>
@@ -286,7 +286,7 @@
           <div class="form-group"><label>Support Tickets</label><input type="number" id="c-support" value="1" min="0" max="15"/></div>
           <div class="form-group"><label>Customer Tenure (j)</label><input type="number" id="c-tenure" value="180" min="0" max="730"/></div>
           <div class="form-group"><label>Return Ratio</label><input type="number" id="c-return" value="0.1" min="0" max="1" step="0.01"/></div>
-          <div class="form-group"><label>Region</label><select id="c-region"><option>UK</option><option>Europe_N</option><option>Europe_S</option><option>Europe_E</option><option>Europe_C</option><option>Asia</option><option>Other</option></select></div></div>
+          <div class="form-group"><label>Total Quantity</label><input type="number" id="c-qty" value="80" min="0"/></div>
         <button class="btn btn-purple" onclick="predictChurn()">
           <span id="c-btn-text">🔮 Prédire le Churn</span>
           <div class="spinner" id="c-spinner"></div>
@@ -561,7 +561,7 @@ async function predictChurn() {
      Frequency: v('c-frequency'), MonetaryTotal: v('c-monetary'),
     Age: v('c-age'), SatisfactionScore: v('c-satisfaction'), SupportTicketsCount: v('c-support'),
     CustomerTenureDays: v('c-tenure'), ReturnRatio: v('c-return'),
-    Region: s('c-region'), }]};
+    TotalQuantity: v('c-qty'), }]};
   try {
     const res = await fetch('/predict', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
     const data = await res.json();
