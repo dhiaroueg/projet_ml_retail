@@ -140,7 +140,7 @@ projet_ml_retail/
 ### 1. Cloner le dépôt
 
 ```bash
-git clone https://github.com/<votre-username>/projet_ml_retail.git
+git clone https://github.com/dhiaroueg/projet_ml_retail.git
 cd projet_ml_retail
 ```
 
