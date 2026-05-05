@@ -3,6 +3,7 @@
 > **Atelier Machine Learning — Module GI2 | 2025-2026**  
 > Encadrant : Mme Fadoua Drira  
 > Technologie : Python 3 · Scikit-learn · XGBoost · Flask · Pandas · NumPy
+> 
 >📄 **Rapport  :** [`rapport.pdf`](reports/rapport.pdf)
 ---
 
