@@ -140,7 +140,7 @@ projet_ml_retail/
 ### 1. Cloner le dépôt
 
 ```bash
-git clone https://github.com/<votre-username>/projet_ml_retail.git
+git clone https://github.com/dhiaroueg/projet_ml_retail.git
 cd projet_ml_retail
 ```
 
@@ -231,7 +231,7 @@ Traitements importants :
 | Dates inconsistantes | RegistrationDate | Parsing + extraction de sous-features |
 | Feature inutile | CustomerID | Suppression |
 | Feature constante | NewsletterSubscribed | Suppression |
-| Data leakage indirect | RFMSegment, CustomerType, LoyaltyLevel, SpendingCategory, ChurnRiskCategory | Suppression pour éviter la fuite de données |
+| Data leakage indirect | RFMSegment, CustomerType, LoyaltyLevel, SpendingCategory, ChurnRiskCategory, AccountStatus | Suppression pour éviter la fuite de données |
 | Déséquilibre de classes | Churn | Split stratifié + pondération des classes |
 
 Fichiers produits :
@@ -426,7 +426,7 @@ Ce script prépare les données avant modélisation.
 Il réalise :
 
 - le nettoyage et la correction des anomalies ;
-- le feature engineering (8 nouvelles variables dérivées) ;
+- le feature engineering (6 nouvelles variables dérivées) ;
 - la suppression des variables inutiles ou à risque de data leakage ;
 - le split train/test stratifié 80 % / 20 % ;
 - la sauvegarde du preprocessor.
@@ -510,7 +510,7 @@ curl -X POST http://127.0.0.1:5000/predict_all \
       "Age": 35,
       "SatisfactionScore": 5,
       "SupportTicketsCount": 1,
-      "CustomerTenure": 500,
+      "CustomerTenureDays": 500,
       "ReturnRatio": 0.05,
       "Region": "UK"
     }]
@@ -524,27 +524,27 @@ curl -X POST http://127.0.0.1:5000/predict_all \
 ### Classification — Prédiction du churn
 
 | Modèle | Accuracy | Precision | Recall | F1-score | ROC-AUC |
-|---|---|---|---|---|---|
-| Logistic Regression | 0.9817 | 0.9791 | 0.9656 | 0.9723 | 0.9987 |
-| Random Forest Classifier | 0.9989 | 1.0000 | 0.9966 | 0.9983 | 1.0000 |
+|---|---:|---:|---:|---:|---:|
+| Logistic Regression | 0.8903 | 0.7893 | 0.9141 | 0.8471 | 0.9592 |
+| Random Forest Classifier | 0.9166 | 0.9258 | 0.8144 | 0.8665 | 0.9743 |
 | **XGBoost Classifier** ✅ | **0.9703** | **0.9715** | **0.9381** | **0.9545** | **0.9952** |
 
 **Modèle retenu :** XGBoost Classifier
 
-**Interprétation :** XGBoost offre le meilleur compromis entre généralisation et performance. Il détecte 93.8 % des clients churners tout en maintenant une précision de 97.1 %. Son ROC-AUC de 0.9952 confirme une excellente capacité de discrimination.
+**Interprétation :** XGBoost obtient le meilleur F1-score et le meilleur ROC-AUC. Il offre donc le meilleur équilibre entre précision et rappel pour détecter les clients churners.
 
 ---
 
 ### Régression — Prédiction de MonetaryTotal
 
 | Modèle | MAE (£) | RMSE (£) | R² |
-|---|---|---|---|
-| Linear Regression | 824.48 | 3 079.90 | 0.8410 |
-| **Random Forest Regressor** ✅ | **521.79** | **2 109.05** | **0.9255** |
+|---|---:|---:|---:|
+| Linear Regression | 829.18 | 3068.63 | 0.8422 |
+| **Random Forest Regressor** ✅ | **586.46** | **2272.96** | **0.9134** |
 
 **Modèle retenu :** Random Forest Regressor
 
-**Interprétation :** Random Forest Regressor obtient l'erreur moyenne la plus faible (521 £) et le meilleur R² (0.9255). Il explique environ 92.6 % de la variation de MonetaryTotal.
+**Interprétation :** Random Forest Regressor obtient l’erreur moyenne la plus faible et le meilleur R². Il explique environ 91.3 % de la variation de MonetaryTotal.
 
 ---
 
@@ -553,31 +553,32 @@ curl -X POST http://127.0.0.1:5000/predict_all \
 #### K-Means
 
 | Métrique | Valeur |
-|---|---|
+|---|---:|
 | Nombre de clusters | 2 |
-| Silhouette Score | 0.8307 |
-| Davies-Bouldin | 1.0065 |
+| Inertie | 152038.02 |
+| Silhouette Score | 0.8222 |
+| Davies-Bouldin | 0.9948 |
 
 Profils obtenus :
 
 | Cluster | Clients | Frequency | MonetaryTotal | Churn | Profil |
-|---|---|---|---|---|---|
+|---|---:|---:|---:|---:|---|
 | Cluster 0 | 4 355 (99.6 %) | 4.74 | 1 535.24 £ | 33.39 % | Clients standards |
 | Cluster 1 | 17 (0.4 %) | 91.76 | 94 947.15 £ | 0.00 % | VIP Champions |
 
-**Interprétation :** K-Means distingue un grand groupe de clients standards présentant un taux de churn de 33 % et un petit groupe de clients VIP très actifs, fidèles à 100 %.
+**Interprétation :** K-Means distingue un grand groupe de clients standards et un petit groupe de clients VIP très actifs.
 
 #### DBSCAN
 
 | Métrique | Valeur |
-|---|---|
+|---|---:|
 | eps | 3.0 |
 | min_samples | 5 |
 | Clusters détectés | 5 |
-| Points bruit / outliers | 747 (17.1 %) |
-| Silhouette Score | 0.3135 |
+| Points bruit / outliers | 733 (16.8 %) |
+| Silhouette Score | 0.1687 |
 
-**Interprétation :** DBSCAN détecte des micro-segments et 747 clients atypiques. Le Cluster 1 présente un taux de churn de 100 % (clients inactifs depuis plus d'un an), tandis que le Cluster 2 regroupe des clients avec 0 % de churn.
+**Interprétation :** DBSCAN obtient une séparation globale plus faible que K-Means, mais il reste utile pour détecter les clients atypiques et les micro-segments à risque.
 
 ---
 
@@ -656,7 +657,8 @@ matplotlib
 seaborn
 flask
 joblib
-statsmodels
+jupyter
+notebook
 ```
 
 Installation :
