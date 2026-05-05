@@ -510,7 +510,7 @@ curl -X POST http://127.0.0.1:5000/predict_all \
       "Age": 35,
       "SatisfactionScore": 5,
       "SupportTicketsCount": 1,
-      "CustomerTenure": 500,
+      "CustomerTenureDays": 500,
       "ReturnRatio": 0.05,
       "Region": "UK"
     }]
