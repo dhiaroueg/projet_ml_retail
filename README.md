@@ -231,7 +231,7 @@ Traitements importants :
 | Dates inconsistantes | RegistrationDate | Parsing + extraction de sous-features |
 | Feature inutile | CustomerID | Suppression |
 | Feature constante | NewsletterSubscribed | Suppression |
-| Data leakage indirect | RFMSegment, CustomerType, LoyaltyLevel, SpendingCategory, ChurnRiskCategory | Suppression pour éviter la fuite de données |
+| Data leakage indirect | RFMSegment, CustomerType, LoyaltyLevel, SpendingCategory, ChurnRiskCategory, AccountStatus | Suppression pour éviter la fuite de données |
 | Déséquilibre de classes | Churn | Split stratifié + pondération des classes |
 
 Fichiers produits :
@@ -426,7 +426,7 @@ Ce script prépare les données avant modélisation.
 Il réalise :
 
 - le nettoyage et la correction des anomalies ;
-- le feature engineering (8 nouvelles variables dérivées) ;
+- le feature engineering (6 nouvelles variables dérivées) ;
 - la suppression des variables inutiles ou à risque de data leakage ;
 - le split train/test stratifié 80 % / 20 % ;
 - la sauvegarde du preprocessor.
